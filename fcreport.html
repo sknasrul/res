@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FC Productivity Graph</title>
+<meta name="description" content="Dark-theme analytics for FC picking operations: blended items-per-picker-hour against target, staffing, volume and fulfilment trends, live from the ARCOS Pickers Details sheet.">
+<style>
+:root{
+  --radius:0.875rem;
+  --background:oklch(0.17 0.018 250);
+  --foreground:oklch(0.96 0.006 250);
+  --card:oklch(0.215 0.02 252);
+  --secondary:oklch(0.27 0.022 252);
+  --muted-foreground:oklch(0.71 0.02 250);
+  --accent:oklch(0.78 0.15 178);
+  --accent-foreground:oklch(0.18 0.02 250);
+  --success:oklch(0.79 0.16 155);
+  --warning:oklch(0.82 0.16 78);
+  --border:oklch(0.31 0.022 252);
+  --chart-4:oklch(0.7 0.13 235);
+  --font-display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --font-sans:"DM Sans",ui-sans-serif,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{
+  background-color:var(--background);
+  color:var(--foreground);
+  font-family:var(--font-sans);
+  background-image:radial-gradient(70% 55% at 50% -10%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%);
+  background-attachment:fixed;
+  min-height:100vh;
+  line-height:1.5;
+}
+.wrap{max-width:76rem;margin:0 auto;padding:0 1.25rem 3.5rem}
+@media (min-width:640px){.wrap{padding:0 2rem 3.5rem}}
+
+/* loading overlay */
+.loading-overlay{
+  position:fixed;inset:0;z-index:200;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;
+  background:var(--background);
+  background-image:radial-gradient(60% 50% at 50% 30%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%);
+  transition:opacity .5s ease, visibility .5s ease;
+}
+.loading-overlay.hide{opacity:0;visibility:hidden;pointer-events:none}
+.loader-bars{display:flex;align-items:flex-end;gap:7px;height:60px}
+.loader-bars span{
+  width:9px;border-radius:4px 4px 1px 1px;
+  background:linear-gradient(180deg, var(--accent), var(--chart-4));
+  animation:loader-bounce 1.1s ease-in-out infinite;
+  box-shadow:0 0 14px -2px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.loader-bars span:nth-child(1){height:22%;animation-delay:0s}
+.loader-bars span:nth-child(2){height:48%;animation-delay:.1s}
+.loader-bars span:nth-child(3){height:78%;animation-delay:.2s}
+.loader-bars span:nth-child(4){height:100%;animation-delay:.3s}
+.loader-bars span:nth-child(5){height:62%;animation-delay:.4s}
+.loader-bars span:nth-child(6){height:36%;animation-delay:.5s}
+@keyframes loader-bounce{0%,100%{transform:scaleY(0.32)}50%{transform:scaleY(1)}}
+.loading-text{font-family:var(--font-display);font-size:0.8rem;letter-spacing:0.14em;color:var(--muted-foreground);text-transform:uppercase;text-align:center}
+.loading-sub{font-size:0.78rem;color:var(--muted-foreground);opacity:0.7;text-align:center;max-width:20rem}
+
+.content-wrap{opacity:0;transition:opacity .7s ease}
+.content-wrap.ready{opacity:1}
+
+/* top bar */
+.topbar{
+  position:sticky;top:0;z-index:40;
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:0.9rem 1.25rem;
+  backdrop-filter:blur(14px);
+  background:color-mix(in oklab, var(--background) 78%, transparent);
+  border-bottom:1px solid var(--border);
+  gap:0.6rem;
+}
+@media (min-width:640px){.topbar{padding:0.9rem 2rem}}
+
+.status-pill{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  padding:0.5rem 0.9rem;border-radius:999px;border:1px solid var(--border);
+  background:color-mix(in oklab, var(--secondary) 45%, transparent);
+  font-size:0.76rem;color:var(--muted-foreground);
+  white-space:nowrap;
+}
+.status-pill .dot{width:0.5rem;height:0.5rem;border-radius:999px;background:var(--warning);flex:none}
+.status-pill.is-live .dot{background:var(--success);animation:live-pulse 2s ease-out infinite}
+.status-pill .stamp{opacity:0.75}
+
+.refresh-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:2.3rem;height:2.3rem;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--muted-foreground);cursor:pointer;flex:none;
+  transition:color .2s, border-color .2s;
+}
+.refresh-btn:hover{color:var(--foreground);border-color:var(--accent)}
+.refresh-btn svg{width:16px;height:16px;transition:transform .6s ease}
+.refresh-btn.spinning svg{animation:spin 0.85s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.pdf-btn{
+  display:inline-flex;align-items:center;gap:0.6rem;
+  padding:0.7rem 1.4rem;
+  border-radius:999px;
+  border:1px solid color-mix(in oklab, var(--accent) 55%, var(--border));
+  background:linear-gradient(135deg, color-mix(in oklab, var(--accent) 22%, var(--card)), color-mix(in oklab, var(--accent) 6%, var(--card)));
+  color:var(--foreground);
+  font-family:var(--font-display);
+  font-size:0.95rem;
+  font-weight:600;
+  letter-spacing:0.01em;
+  cursor:pointer;
+  box-shadow:0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent), 0 14px 30px -16px rgba(0,0,0,0.7);
+  transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  white-space:nowrap;
+}
+.pdf-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 0 26px -4px color-mix(in oklab, var(--accent) 65%, transparent), 0 18px 34px -16px rgba(0,0,0,0.75);
+  border-color:var(--accent);
+}
+.pdf-btn:active{transform:translateY(0)}
+.pdf-btn svg{width:20px;height:20px;flex:none}
+
+/* header */
+header.hero{padding-top:3rem}
+.eyebrow{
+  font-size:0.72rem;font-weight:600;letter-spacing:0.35em;text-transform:uppercase;color:var(--accent);
+}
+h1{
+  font-family:var(--font-display);
+  margin-top:0.7rem;
+  font-size:2.4rem;
+  line-height:1.1;
+  letter-spacing:-0.02em;
+}
+@media (min-width:640px){h1{font-size:3.1rem}}
+.lede{margin-top:0.8rem;max-width:44rem;color:var(--muted-foreground)}
+
+/* panel */
+.panel{
+  border:1px solid var(--border);
+  border-radius:calc(var(--radius) + 4px);
+  background:color-mix(in oklab, var(--card) 82%, transparent);
+  backdrop-filter:blur(10px);
+  box-shadow:0 18px 40px -28px oklch(0 0 0 / 0.9);
+}
+
+/* kpis */
+.kpis{
+  margin-top:2.5rem;
+  display:grid;grid-template-columns:1fr;gap:1rem;
+}
+@media (min-width:640px){.kpis{grid-template-columns:1fr 1fr}}
+@media (min-width:1024px){.kpis{grid-template-columns:repeat(3,1fr)}}
+.kpi{padding:1.25rem}
+.kpi .label{font-size:0.72rem;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted-foreground)}
+.kpi .value{
+  margin-top:0.75rem;font-family:var(--font-display);font-size:2.2rem;line-height:1;letter-spacing:-0.02em;
+}
+.kpi .value .suffix{font-size:1.3rem}
+.kpi .hint{margin-top:0.6rem;font-size:0.86rem;color:var(--muted-foreground)}
+.tone-good{color:var(--success)}
+.tone-warn{color:var(--warning)}
+
+/* rise animation */
+.rise{animation:rise .7s cubic-bezier(.22,1,.36,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.d1{animation-delay:.04s}.d2{animation-delay:.1s}.d3{animation-delay:.16s}.d4{animation-delay:.22s}.d5{animation-delay:.28s}.d6{animation-delay:.34s}
+
+/* chart panel */
+.chart-panel{margin-top:2rem;padding:1.25rem}
+@media (min-width:640px){.chart-panel{padding:1.75rem}}
+.chart-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem}
+.chart-head h2{font-family:var(--font-display);font-size:1.5rem;letter-spacing:-0.01em}
+.chart-head .sub{margin-top:0.25rem;font-size:0.86rem;color:var(--muted-foreground)}
+
+.range-tabs{
+  display:flex;width:fit-content;border-radius:999px;border:1px solid var(--border);
+  background:color-mix(in oklab, var(--secondary) 40%, transparent);padding:0.25rem;
+}
+.range-tabs button{
+  border:none;background:transparent;color:var(--muted-foreground);
+  font-family:var(--font-sans);font-size:0.76rem;font-weight:600;
+  padding:0.4rem 0.85rem;border-radius:999px;cursor:pointer;
+  transition:all .3s ease;
+}
+.range-tabs button.active{
+  background:var(--accent);color:var(--accent-foreground);
+  box-shadow:0 0 18px -4px var(--accent);
+}
+.range-tabs button:not(.active):hover{color:var(--foreground)}
+
+.legend{margin-top:1rem;display:flex;flex-wrap:wrap;align-items:center;gap:1.25rem;font-size:0.76rem;color:var(--muted-foreground)}
+.legend .swatch{display:inline-flex;align-items:center;gap:0.5rem}
+.legend .bar{width:1.5rem;height:0.45rem;border-radius:999px;background:var(--accent)}
+.legend .bar.warn{background:var(--warning)}
+.legend .bar.dashed{background:none;border-top:2px dashed var(--warning);height:0}
+.live-dot{
+  display:inline-block;width:0.6rem;height:0.6rem;border-radius:999px;background:var(--success);
+  box-shadow:0 0 0 0 color-mix(in oklab, var(--success) 70%, transparent);
+  animation:live-pulse 2s ease-out infinite;
+}
+@keyframes live-pulse{
+  0%{box-shadow:0 0 0 0 color-mix(in oklab, var(--success) 60%, transparent)}
+  70%{box-shadow:0 0 0 10px transparent}
+  100%{box-shadow:0 0 0 0 transparent}
+}
+.zoom-controls{margin-left:auto;display:flex;align-items:center;gap:0.65rem}
+.zoom-controls .hint-text{white-space:nowrap}
+.zbtn{
+  height:1.6rem;width:1.6rem;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--muted-foreground);cursor:pointer;
+  font-size:0.95rem;line-height:1;transition:color .2s, border-color .2s, background .2s;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.zbtn:hover{color:var(--foreground);border-color:var(--accent)}
+.reset-btn{
+  border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted-foreground);
+  padding:0.1rem 0.6rem;font-size:0.76rem;cursor:pointer;transition:color .2s;
+}
+.reset-btn:hover{color:var(--foreground)}
+
+.chart-shell{
+  position:relative;margin-top:1rem;height:420px;width:100%;
+  cursor:grab;touch-action:none;user-select:none;
+}
+.chart-shell.grabbing{cursor:grabbing}
+.chart-shell svg{width:100%;height:100%;display:block;overflow:visible}
+
+.tooltip{
+  position:fixed;pointer-events:none;z-index:9999;
+  padding:0.75rem 1rem;border-radius:0.75rem;
+  border:1px solid var(--border);
+  background:color-mix(in oklab, var(--card) 96%, transparent);
+  backdrop-filter:blur(10px);
+  box-shadow:0 18px 40px -28px oklch(0 0 0 / 0.9);
+  font-size:0.82rem;opacity:0;transition:opacity .12s ease;white-space:nowrap;
+}
+.tooltip.show{opacity:1}
+.tooltip .t-title{font-family:var(--font-display);font-size:0.95rem}
+.tooltip p{margin-top:0.25rem;color:var(--muted-foreground)}
+.tooltip .acc{color:var(--accent)}
+
+.chart-line{
+  fill:none;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;
+  filter:url(#lineGlow);
+}
+.mini-line{fill:none;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.chart-area{opacity:0;transition:opacity 1s ease .2s}
+.chart-area.in{opacity:1}
+.grid-line{stroke:var(--border);stroke-width:1}
+.axis-label{fill:var(--muted-foreground);font-size:11px;font-family:var(--font-sans)}
+.ref-label{fill:var(--warning);font-size:11px;font-family:var(--font-sans)}
+.ref-line{stroke:var(--warning);stroke-width:1.4;stroke-dasharray:6 6}
+
+/* secondary charts grid */
+.charts-grid{margin-top:1.5rem;display:grid;grid-template-columns:1fr;gap:1.25rem}
+@media (min-width:1100px){.charts-grid{grid-template-columns:1fr 1fr}}
+.mini-chart{padding:1.25rem}
+@media (min-width:640px){.mini-chart{padding:1.5rem}}
+.mini-chart .chart-head h2{font-size:1.1rem}
+.mini-chart .chart-shell{height:250px;cursor:default;touch-action:auto}
+.mini-chart .legend{margin-top:0.65rem;gap:1rem}
+
+/* insights */
+.insights{margin-top:3.5rem}
+.insights h2{font-family:var(--font-display);font-size:1.85rem;letter-spacing:-0.01em}
+.insights .sub{margin-top:0.5rem;max-width:46rem;color:var(--muted-foreground)}
+.cards{margin-top:1.75rem;display:grid;grid-template-columns:1fr;gap:1rem}
+@media (min-width:1024px){.cards{grid-template-columns:1fr 1fr}}
+.card{padding:1.5rem}
+.card h3{font-family:var(--font-display);font-size:1.1rem}
+.card p{margin-top:0.5rem;font-size:0.88rem;line-height:1.6;color:var(--muted-foreground)}
+.card ul{margin-top:0.5rem;font-size:0.88rem;line-height:1.6;color:var(--muted-foreground);padding-left:0}
+.card li{list-style:none;margin-top:0.4rem}
+
+.table-panel{margin-top:1.5rem;overflow-x:auto}
+table{width:100%;min-width:760px;border-collapse:collapse;font-size:0.88rem}
+thead tr{border-bottom:1px solid var(--border);text-align:left}
+th{padding:1rem;font-size:0.72rem;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted-foreground);white-space:nowrap}
+td{padding:1rem;white-space:nowrap}
+tbody tr{border-bottom:1px solid color-mix(in oklab, var(--border) 60%, transparent)}
+tbody tr:last-child{border-bottom:none}
+td.month{font-weight:600}
+td.muted{color:var(--muted-foreground)}
+td.accent{color:var(--accent)}
+
+footer{margin-top:3.5rem;border-top:1px solid var(--border);padding-top:1.5rem;font-size:0.76rem;color:var(--muted-foreground);display:flex;flex-wrap:wrap;gap:0.5rem 1.5rem;justify-content:space-between}
+
+.no-print{}
+@media print{
+  .no-print{display:none!important}
+  .loading-overlay{display:none!important}
+  .content-wrap{opacity:1!important}
+  body{background:#fff;color:#111}
+  .panel{box-shadow:none;backdrop-filter:none;border-color:#ccc}
+  .topbar{position:static;backdrop-filter:none;background:#fff}
+  @page{margin:12mm}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
+}
+
+/* ============================== RESPONSIVE / MOBILE ============================== */
+@media (max-width:640px){
+  .wrap{padding:0 0.9rem 2.5rem}
+  header.hero{padding-top:2rem}
+  h1{font-size:1.9rem}
+  .eyebrow{font-size:0.66rem;letter-spacing:0.28em}
+  .lede{font-size:0.9rem}
+
+  .topbar{
+    padding:0.7rem 0.9rem;flex-wrap:wrap;justify-content:space-between;
+  }
+  .pdf-btn{padding:0.55rem 1rem;font-size:0.82rem;gap:0.4rem}
+  .pdf-btn svg{width:17px;height:17px}
+  .status-pill{font-size:0.68rem;padding:0.4rem 0.7rem}
+  .refresh-btn{width:2rem;height:2rem}
+
+  .kpis{margin-top:1.75rem;gap:0.75rem}
+  .kpi{padding:1rem}
+  .kpi .value{font-size:1.7rem}
+  .kpi .label{font-size:0.66rem;letter-spacing:0.12em}
+  .kpi .hint{font-size:0.78rem}
+
+  .chart-panel{padding:1rem;margin-top:1.25rem}
+  .chart-head h2{font-size:1.15rem}
+  .chart-head{gap:0.6rem}
+  .range-tabs{width:100%;overflow-x:auto;justify-content:flex-start}
+  .range-tabs button{padding:0.38rem 0.65rem;font-size:0.7rem;white-space:nowrap}
+
+  .legend{gap:0.7rem;font-size:0.7rem}
+  .zoom-controls{margin-left:0;width:100%;justify-content:flex-end}
+  .zoom-controls .hint-text{display:none}
+
+  .chart-shell{height:280px}
+  .mini-chart .chart-shell{height:200px}
+  .mini-chart{padding:1rem}
+  .mini-chart .chart-head h2{font-size:1rem}
+  .charts-grid{gap:0.9rem;margin-top:1.1rem}
+
+  .insights h2{font-size:1.4rem}
+  .cards{gap:0.75rem}
+  .card{padding:1.1rem}
+  .card h3{font-size:1rem}
+
+  table{min-width:600px;font-size:0.78rem}
+  th, td{padding:0.7rem 0.6rem}
+
+  footer{margin-top:2.5rem;flex-direction:column;gap:0.4rem}
+}
+
+@media (max-width:400px){
+  h1{font-size:1.6rem}
+  .kpi .value{font-size:1.5rem}
+  .pdf-btn span, .pdf-btn{font-size:0.78rem}
+  .chart-shell{height:240px}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader-bars" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <p class="loading-text">Syncing FC productivity data</p>
+  <p class="loading-sub" id="loadingSub">Pulling the latest rows from the ARCOS Pickers Details sheet…</p>
+</div>
+
+<div class="topbar no-print">
+  <span class="status-pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">Connecting…</span></span>
+  <button class="refresh-btn" id="refreshBtn" aria-label="Refresh live data" title="Refresh live data">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 11A8 8 0 1 0 18.5 16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M20 5v6h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+  <button class="pdf-btn" id="pdfBtn" aria-label="Save report as PDF">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 2.75h8.5L19 7.25V19a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 19V5A2.25 2.25 0 0 1 6 2.75Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M14.25 2.75V6.5a1 1 0 0 0 1 1H19" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M8.25 12.5h1.4c.72 0 1.3.58 1.3 1.3v0c0 .72-.58 1.3-1.3 1.3h-1.4v2.15" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12.85 17.25V12.5h1.1a1.83 1.83 0 0 1 1.83 1.83v.9a1.83 1.83 0 0 1-1.83 1.83z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17.75 17.25V12.5h2.1M17.75 15.1h1.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Save as PDF
+  </button>
+</div>
+
+<div class="content-wrap" id="contentWrap">
+<div class="wrap">
+  <header class="hero rise">
+    <p class="eyebrow">ARCOS · Picking Operations</p>
+    <h1>FC Productivity Graph</h1>
+    <p class="lede" id="ledeText"></p>
+    <div class="range-tabs no-print" id="avgIppTabs" style="margin:1.25rem auto 0;justify-content:center"></div>
+  </header>
+
+  <section class="kpis" id="kpiGrid"></section>
+
+  <section class="panel chart-panel rise d1" id="productivity-chart">
+    <div class="chart-head">
+      <div>
+        <h2>Blended IPP vs Target</h2>
+        <p class="sub" id="mainChartSub">Daily blended rate with reference targets</p>
+      </div>
+      <div class="range-tabs no-print" id="rangeTabs"></div>
+    </div>
+
+    <div class="legend" id="mainLegend">
+      <span class="swatch"><span class="bar"></span> Blended IPP</span>
+      <span class="swatch"><span class="live-dot"></span> Live / latest point</span>
+      <span class="zoom-controls no-print">
+        <span class="hint-text">Scroll to zoom · drag to pan</span>
+        <button class="zbtn" id="zoomIn" aria-label="Zoom in">+</button>
+        <button class="zbtn" id="zoomOut" aria-label="Zoom out">−</button>
+        <button class="reset-btn" id="zoomReset" style="display:none">Reset</button>
+      </span>
+    </div>
+
+    <div class="chart-shell" id="chartShell">
+      <svg id="chartSvg" viewBox="0 0 1000 420" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="ippFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.5">
+              <animate attributeName="stop-opacity" values="0.5;0.28;0.5" dur="4s" repeatCount="indefinite"/>
+            </stop>
+            <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="ippStroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="var(--chart-4)"/>
+            <stop offset="55%" stop-color="var(--accent)"/>
+            <stop offset="100%" stop-color="var(--success)"/>
+            <animateTransform attributeName="gradientTransform" type="translate" values="-0.15 0; 0.15 0; -0.15 0" dur="6s" repeatCount="indefinite"/>
+          </linearGradient>
+          <filter id="lineGlow" x="-30%" y="-60%" width="160%" height="260%">
+            <feGaussianBlur stdDeviation="4" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g id="chartGrid"></g>
+        <g id="chartAxisX"></g>
+        <g id="chartAxisY"></g>
+        <g id="chartRef"></g>
+        <path id="chartAreaPath" class="chart-area"></path>
+        <path id="chartLinePath" class="chart-line" stroke="url(#ippStroke)"></path>
+        <g id="chartPoints"></g>
+        <g id="chartHover"></g>
+        <g id="chartLive"></g>
+      </svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </section>
+
+  <section class="charts-grid" id="chartsGrid">
+    <article class="panel chart-panel mini-chart rise" id="chart-daynight">
+      <div class="chart-head">
+        <div>
+          <h2>Day vs Night — Blended IPP</h2>
+          <p class="sub" id="daynightSub">Hourly IPP split across shifts</p>
+        </div>
+      </div>
+      <div class="legend"></div>
+      <div class="chart-shell">
+        <svg viewBox="0 0 1000 300" preserveAspectRatio="none">
+          <g class="gridG"></g><g class="axisXG"></g><g class="axisYG"></g><g class="refG"></g><g class="seriesG"></g><g class="hoverG"></g>
+        </svg>
+        <div class="tooltip"></div>
+      </div>
+    </article>
+
+    <article class="panel chart-panel mini-chart rise d1" id="chart-manpower">
+      <div class="chart-head">
+        <div>
+          <h2>Manpower vs Required Workforce</h2>
+          <p class="sub" id="manpowerSub">Total present headcount against the required plan</p>
+        </div>
+      </div>
+      <div class="legend"></div>
+      <div class="chart-shell">
+        <svg viewBox="0 0 1000 300" preserveAspectRatio="none">
+          <g class="gridG"></g><g class="axisXG"></g><g class="axisYG"></g><g class="refG"></g><g class="seriesG"></g><g class="hoverG"></g>
+        </svg>
+        <div class="tooltip"></div>
+      </div>
+    </article>
+
+    <article class="panel chart-panel mini-chart rise d2" id="chart-volume">
+      <div class="chart-head">
+        <div>
+          <h2>Processed Volume vs Projected Load</h2>
+          <p class="sub" id="volumeSub">Daily units picked against the daily plan</p>
+        </div>
+      </div>
+      <div class="legend"></div>
+      <div class="chart-shell">
+        <svg viewBox="0 0 1000 300" preserveAspectRatio="none">
+          <g class="gridG"></g><g class="axisXG"></g><g class="axisYG"></g><g class="refG"></g><g class="seriesG"></g><g class="hoverG"></g>
+        </svg>
+        <div class="tooltip"></div>
+      </div>
+    </article>
+
+    <article class="panel chart-panel mini-chart rise d3" id="chart-fulfilment">
+      <div class="chart-head">
+        <div>
+          <h2>Fulfilment Rate Trend</h2>
+          <p class="sub">Daily delta as a percentage of projected load</p>
+        </div>
+      </div>
+      <div class="legend"></div>
+      <div class="chart-shell">
+        <svg viewBox="0 0 1000 300" preserveAspectRatio="none">
+          <g class="gridG"></g><g class="axisXG"></g><g class="axisYG"></g><g class="refG"></g><g class="seriesG"></g><g class="hoverG"></g>
+        </svg>
+        <div class="tooltip"></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="insights">
+    <h2>What the data is telling us</h2>
+    <p class="sub" id="insightsSub">A statistical read of the full sheet: manpower plan vs attendance, day/night split, processed volume against projection, and the trajectory toward target.</p>
+
+    <div class="cards" id="insightCards"></div>
+
+    <h2 style="margin-top:2.5rem;font-size:1.4rem" id="dodHeading">Day on Day</h2>
+    <p class="sub" id="dodSub">Consecutive-day deltas, live from the sheet</p>
+    <div class="panel table-panel">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Blended IPP</th><th>Δ IPP</th><th>Δ%</th><th>Manpower</th><th>Δ MP</th><th>Volume</th><th>Δ Volume</th>
+          </tr>
+        </thead>
+        <tbody id="dayOnDayRows"></tbody>
+      </table>
+    </div>
+
+    <h2 style="margin-top:2.5rem;font-size:1.4rem" id="momHeading">Month on Month</h2>
+    <p class="sub" id="momSub">Monthly averages with change vs the prior month</p>
+    <div class="panel table-panel">
+      <table>
+        <thead>
+          <tr>
+            <th>Month</th><th>Days</th><th>Avg IPP</th><th>Δ IPP</th><th>Δ%</th><th>Best</th><th>Avg manpower</th><th>Avg units/day</th><th>Fulfilment</th><th>Night avg IPP</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer id="footerText"></footer>
+</div>
+</div>
+
+<script id="daily-data-fallback" type="application/json">[{"date":"15-Jun","planD":0,"planN":0,"presD":0,"presN":0,"pickD":0,"pickN":0,"tlD":0,"tlN":0,"mp":0,"proj":75000,"reqWorkforce":52,"actD":0,"actN":0,"load":0,"delta":75000,"deltaPct":0.0,"calcQty":0,"ippD":0,"ippN":0,"dailyAvg":0,"targetIppHour":180,"ippShiftD":0,"ippShiftN":0,"targetIppShift":1440},{"date":"16-Jun","planD":0,"planN":0,"presD":18,"presN":0,"pickD":8,"pickN":0,"tlD":2,"tlN":0,"mp":20,"proj":75000,"reqWorkforce":52,"actD":1957,"actN":0,"load":1957,"delta":73043,"deltaPct":2.61,"calcQty":25920,"ippD":31,"ippN":0,"dailyAvg":12,"targetIppHour":180,"ippShiftD":109,"ippShiftN":0,"targetIppShift":1440},{"date":"17-Jun","planD":0,"planN":0,"presD":17,"presN":0,"pickD":17,"pickN":0,"tlD":3,"tlN":0,"mp":20,"proj":75000,"reqWorkforce":52,"actD":7712,"actN":0,"load":7712,"delta":67288,"deltaPct":10.28,"calcQty":24480,"ippD":57,"ippN":0,"dailyAvg":48,"targetIppHour":180,"ippShiftD":454,"ippShiftN":0,"targetIppShift":1440},{"date":"18-Jun","planD":0,"planN":0,"presD":16,"presN":0,"pickD":16,"pickN":0,"tlD":2,"tlN":0,"mp":18,"proj":75000,"reqWorkforce":52,"actD":8271,"actN":0,"load":8271,"delta":66729,"deltaPct":11.03,"calcQty":23040,"ippD":65,"ippN":0,"dailyAvg":57,"targetIppHour":180,"ippShiftD":517,"ippShiftN":0,"targetIppShift":1440},{"date":"19-Jun","planD":0,"planN":0,"presD":28,"presN":0,"pickD":12,"pickN":0,"tlD":3,"tlN":0,"mp":31,"proj":75000,"reqWorkforce":52,"actD":5042,"actN":0,"load":5042,"delta":69958,"deltaPct":6.72,"calcQty":40320,"ippD":53,"ippN":0,"dailyAvg":20,"targetIppHour":180,"ippShiftD":180,"ippShiftN":0,"targetIppShift":1440},{"date":"20-Jun","planD":0,"planN":0,"presD":20,"presN":0,"pickD":20,"pickN":0,"tlD":3,"tlN":0,"mp":23,"proj":75000,"reqWorkforce":52,"actD":9447,"actN":0,"load":9447,"delta":65553,"deltaPct":12.6,"calcQty":28800,"ippD":59,"ippN":0,"dailyAvg":51,"targetIppHour":180,"ippShiftD":472,"ippShiftN":0,"targetIppShift":1440},{"date":"21-Jun","planD":0,"planN":0,"presD":19,"presN":0,"pickD":19,"pickN":0,"tlD":3,"tlN":0,"mp":22,"proj":75000,"reqWorkforce":52,"actD":11710,"actN":0,"load":11710,"delta":63290,"deltaPct":15.61,"calcQty":27360,"ippD":77,"ippN":0,"dailyAvg":67,"targetIppHour":180,"ippShiftD":616,"ippShiftN":0,"targetIppShift":1440},{"date":"22-Jun","planD":0,"planN":0,"presD":30,"presN":0,"pickD":30,"pickN":0,"tlD":2,"tlN":0,"mp":32,"proj":75000,"reqWorkforce":52,"actD":13188,"actN":0,"load":13188,"delta":61812,"deltaPct":17.58,"calcQty":43200,"ippD":55,"ippN":0,"dailyAvg":52,"targetIppHour":180,"ippShiftD":440,"ippShiftN":0,"targetIppShift":1440},{"date":"23-Jun","planD":0,"planN":0,"presD":32,"presN":0,"pickD":32,"pickN":0,"tlD":2,"tlN":0,"mp":34,"proj":75000,"reqWorkforce":52,"actD":16699,"actN":0,"load":16699,"delta":58301,"deltaPct":22.27,"calcQty":46080,"ippD":65,"ippN":0,"dailyAvg":61,"targetIppHour":180,"ippShiftD":522,"ippShiftN":0,"targetIppShift":1440},{"date":"24-Jun","planD":0,"planN":0,"presD":33,"presN":0,"pickD":33,"pickN":0,"tlD":3,"tlN":0,"mp":36,"proj":75000,"reqWorkforce":52,"actD":15691,"actN":0,"load":15691,"delta":59309,"deltaPct":20.92,"calcQty":47520,"ippD":59,"ippN":0,"dailyAvg":54,"targetIppHour":180,"ippShiftD":475,"ippShiftN":0,"targetIppShift":1440},{"date":"25-Jun","planD":0,"planN":0,"presD":29,"presN":0,"pickD":29,"pickN":0,"tlD":3,"tlN":0,"mp":32,"proj":75000,"reqWorkforce":52,"actD":14448,"actN":0,"load":14448,"delta":60552,"deltaPct":19.26,"calcQty":41760,"ippD":62,"ippN":0,"dailyAvg":56,"targetIppHour":180,"ippShiftD":498,"ippShiftN":0,"targetIppShift":1440},{"date":"26-Jun","planD":0,"planN":0,"presD":25,"presN":0,"pickD":25,"pickN":0,"tlD":2,"tlN":0,"mp":27,"proj":75000,"reqWorkforce":52,"actD":14424,"actN":0,"load":14424,"delta":60576,"deltaPct":19.23,"calcQty":36000,"ippD":72,"ippN":0,"dailyAvg":67,"targetIppHour":180,"ippShiftD":577,"ippShiftN":0,"targetIppShift":1440},{"date":"27-Jun","planD":0,"planN":0,"presD":28,"presN":0,"pickD":28,"pickN":0,"tlD":2,"tlN":0,"mp":30,"proj":75000,"reqWorkforce":52,"actD":20110,"actN":0,"load":20110,"delta":54890,"deltaPct":26.81,"calcQty":40320,"ippD":90,"ippN":0,"dailyAvg":84,"targetIppHour":180,"ippShiftD":718,"ippShiftN":0,"targetIppShift":1440},{"date":"28-Jun","planD":25,"planN":0,"presD":19,"presN":0,"pickD":19,"pickN":0,"tlD":1,"tlN":0,"mp":20,"proj":75000,"reqWorkforce":52,"actD":13658,"actN":0,"load":13658,"delta":61342,"deltaPct":18.21,"calcQty":27360,"ippD":90,"ippN":0,"dailyAvg":85,"targetIppHour":180,"ippShiftD":719,"ippShiftN":0,"targetIppShift":1440},{"date":"29-Jun","planD":28,"planN":0,"presD":26,"presN":0,"pickD":26,"pickN":0,"tlD":2,"tlN":0,"mp":28,"proj":75000,"reqWorkforce":52,"actD":19514,"actN":0,"load":19514,"delta":55486,"deltaPct":26.02,"calcQty":37440,"ippD":94,"ippN":0,"dailyAvg":87,"targetIppHour":180,"ippShiftD":751,"ippShiftN":0,"targetIppShift":1440},{"date":"30-Jun","planD":30,"planN":0,"presD":25,"presN":0,"pickD":25,"pickN":0,"tlD":2,"tlN":0,"mp":27,"proj":75000,"reqWorkforce":52,"actD":21661,"actN":0,"load":21661,"delta":53339,"deltaPct":28.88,"calcQty":36000,"ippD":108,"ippN":0,"dailyAvg":100,"targetIppHour":180,"ippShiftD":866,"ippShiftN":0,"targetIppShift":1440},{"date":"1-Jul","planD":28,"planN":0,"presD":25,"presN":0,"pickD":25,"pickN":0,"tlD":2,"tlN":0,"mp":27,"proj":75000,"reqWorkforce":52,"actD":20594,"actN":0,"load":20594,"delta":54406,"deltaPct":27.46,"calcQty":36000,"ippD":103,"ippN":0,"dailyAvg":95,"targetIppHour":180,"ippShiftD":824,"ippShiftN":0,"targetIppShift":1440},{"date":"2-Jul","planD":28,"planN":0,"presD":25,"presN":0,"pickD":25,"pickN":0,"tlD":2,"tlN":0,"mp":27,"proj":75000,"reqWorkforce":52,"actD":17465,"actN":0,"load":17465,"delta":57535,"deltaPct":23.29,"calcQty":36000,"ippD":87,"ippN":0,"dailyAvg":81,"targetIppHour":180,"ippShiftD":699,"ippShiftN":0,"targetIppShift":1440},{"date":"3-Jul","planD":25,"planN":0,"presD":19,"presN":0,"pickD":19,"pickN":0,"tlD":2,"tlN":0,"mp":21,"proj":75000,"reqWorkforce":52,"actD":21628,"actN":0,"load":21628,"delta":53372,"deltaPct":28.84,"calcQty":27360,"ippD":142,"ippN":0,"dailyAvg":129,"targetIppHour":180,"ippShiftD":1138,"ippShiftN":0,"targetIppShift":1440},{"date":"4-Jul","planD":26,"planN":0,"presD":20,"presN":0,"pickD":20,"pickN":0,"tlD":2,"tlN":0,"mp":22,"proj":75000,"reqWorkforce":52,"actD":20228,"actN":0,"load":20228,"delta":54772,"deltaPct":26.97,"calcQty":28800,"ippD":126,"ippN":0,"dailyAvg":115,"targetIppHour":180,"ippShiftD":1011,"ippShiftN":0,"targetIppShift":1440},{"date":"5-Jul","planD":46,"planN":0,"presD":37,"presN":0,"pickD":28,"pickN":0,"tlD":2,"tlN":0,"mp":39,"proj":75000,"reqWorkforce":52,"actD":23545,"actN":0,"load":23545,"delta":51455,"deltaPct":31.39,"calcQty":53280,"ippD":105,"ippN":0,"dailyAvg":75,"targetIppHour":180,"ippShiftD":636,"ippShiftN":0,"targetIppShift":1440},{"date":"6-Jul","planD":41,"planN":0,"presD":32,"presN":0,"pickD":32,"pickN":0,"tlD":2,"tlN":0,"mp":34,"proj":75000,"reqWorkforce":52,"actD":33582,"actN":0,"load":33582,"delta":41418,"deltaPct":44.78,"calcQty":46080,"ippD":131,"ippN":0,"dailyAvg":123,"targetIppHour":180,"ippShiftD":1049,"ippShiftN":0,"targetIppShift":1440},{"date":"7-Jul","planD":48,"planN":0,"presD":45,"presN":0,"pickD":45,"pickN":0,"tlD":2,"tlN":0,"mp":47,"proj":75000,"reqWorkforce":52,"actD":35722,"actN":0,"load":35722,"delta":39278,"deltaPct":47.63,"calcQty":64800,"ippD":99,"ippN":0,"dailyAvg":95,"targetIppHour":180,"ippShiftD":794,"ippShiftN":0,"targetIppShift":1440},{"date":"8-Jul","planD":40,"planN":0,"presD":35,"presN":0,"pickD":35,"pickN":0,"tlD":2,"tlN":0,"mp":37,"proj":75000,"reqWorkforce":52,"actD":30777,"actN":0,"load":30777,"delta":44223,"deltaPct":41.04,"calcQty":50400,"ippD":110,"ippN":0,"dailyAvg":104,"targetIppHour":180,"ippShiftD":879,"ippShiftN":0,"targetIppShift":1440},{"date":"9-Jul","planD":36,"planN":0,"presD":30,"presN":0,"pickD":30,"pickN":0,"tlD":2,"tlN":0,"mp":32,"proj":75000,"reqWorkforce":52,"actD":27788,"actN":0,"load":27788,"delta":47212,"deltaPct":37.05,"calcQty":43200,"ippD":116,"ippN":0,"dailyAvg":109,"targetIppHour":180,"ippShiftD":926,"ippShiftN":0,"targetIppShift":1440},{"date":"10-Jul","planD":35,"planN":0,"presD":30,"presN":0,"pickD":30,"pickN":0,"tlD":2,"tlN":0,"mp":32,"proj":75000,"reqWorkforce":52,"actD":25074,"actN":0,"load":25074,"delta":49926,"deltaPct":33.43,"calcQty":43200,"ippD":104,"ippN":0,"dailyAvg":98,"targetIppHour":180,"ippShiftD":836,"ippShiftN":0,"targetIppShift":1440},{"date":"11-Jul","planD":40,"planN":0,"presD":39,"presN":0,"pickD":39,"pickN":0,"tlD":2,"tlN":0,"mp":41,"proj":75000,"reqWorkforce":52,"actD":35871,"actN":0,"load":35871,"delta":39129,"deltaPct":47.83,"calcQty":56160,"ippD":115,"ippN":0,"dailyAvg":109,"targetIppHour":180,"ippShiftD":920,"ippShiftN":0,"targetIppShift":1440},{"date":"12-Jul","planD":35,"planN":0,"presD":30,"presN":0,"pickD":30,"pickN":0,"tlD":1,"tlN":0,"mp":31,"proj":75000,"reqWorkforce":52,"actD":22871,"actN":0,"load":22871,"delta":52129,"deltaPct":30.49,"calcQty":43200,"ippD":95,"ippN":0,"dailyAvg":92,"targetIppHour":180,"ippShiftD":762,"ippShiftN":0,"targetIppShift":1440},{"date":"13-Jul","planD":34,"planN":0,"presD":30,"presN":0,"pickD":30,"pickN":0,"tlD":2,"tlN":0,"mp":32,"proj":75000,"reqWorkforce":52,"actD":23960,"actN":0,"load":23960,"delta":51040,"deltaPct":31.95,"calcQty":43200,"ippD":100,"ippN":0,"dailyAvg":94,"targetIppHour":180,"ippShiftD":799,"ippShiftN":0,"targetIppShift":1440},{"date":"14-Jul","planD":41,"planN":0,"presD":39,"presN":0,"pickD":39,"pickN":0,"tlD":2,"tlN":0,"mp":41,"proj":75000,"reqWorkforce":52,"actD":33129,"actN":0,"load":33129,"delta":41871,"deltaPct":44.17,"calcQty":56160,"ippD":106,"ippN":0,"dailyAvg":101,"targetIppHour":180,"ippShiftD":849,"ippShiftN":0,"targetIppShift":1440},{"date":"15-Jul","planD":42,"planN":0,"presD":37,"presN":0,"pickD":37,"pickN":0,"tlD":2,"tlN":0,"mp":39,"proj":75000,"reqWorkforce":52,"actD":28083,"actN":0,"load":28083,"delta":46917,"deltaPct":37.44,"calcQty":53280,"ippD":95,"ippN":0,"dailyAvg":90,"targetIppHour":180,"ippShiftD":759,"ippShiftN":0,"targetIppShift":1440},{"date":"16-Jul","planD":38,"planN":0,"presD":30,"presN":0,"pickD":30,"pickN":0,"tlD":2,"tlN":0,"mp":32,"proj":75000,"reqWorkforce":52,"actD":23593,"actN":0,"load":23593,"delta":51407,"deltaPct":31.46,"calcQty":43200,"ippD":98,"ippN":0,"dailyAvg":92,"targetIppHour":180,"ippShiftD":786,"ippShiftN":0,"targetIppShift":1440},{"date":"17-Jul","planD":35,"planN":0,"presD":33,"presN":0,"pickD":33,"pickN":0,"tlD":2,"tlN":0,"mp":35,"proj":75000,"reqWorkforce":52,"actD":24613,"actN":0,"load":24613,"delta":50387,"deltaPct":32.82,"calcQty":47520,"ippD":93,"ippN":0,"dailyAvg":88,"targetIppHour":180,"ippShiftD":746,"ippShiftN":0,"targetIppShift":1440},{"date":"18-Jul","planD":38,"planN":0,"presD":35,"presN":0,"pickD":35,"pickN":0,"tlD":2,"tlN":0,"mp":37,"proj":75000,"reqWorkforce":52,"actD":32658,"actN":0,"load":32658,"delta":42342,"deltaPct":43.54,"calcQty":50400,"ippD":117,"ippN":0,"dailyAvg":110,"targetIppHour":180,"ippShiftD":933,"ippShiftN":0,"targetIppShift":1440},{"date":"19-Jul","planD":32,"planN":0,"presD":26,"presN":0,"pickD":26,"pickN":0,"tlD":2,"tlN":0,"mp":28,"proj":75000,"reqWorkforce":52,"actD":27262,"actN":0,"load":27262,"delta":47738,"deltaPct":36.35,"calcQty":37440,"ippD":131,"ippN":0,"dailyAvg":122,"targetIppHour":180,"ippShiftD":1049,"ippShiftN":0,"targetIppShift":1440},{"date":"20-Jul","planD":35,"planN":0,"presD":29,"presN":0,"pickD":29,"pickN":0,"tlD":1,"tlN":0,"mp":30,"proj":75000,"reqWorkforce":52,"actD":28694,"actN":0,"load":28694,"delta":46306,"deltaPct":38.26,"calcQty":41760,"ippD":124,"ippN":0,"dailyAvg":120,"targetIppHour":180,"ippShiftD":989,"ippShiftN":0,"targetIppShift":1440},{"date":"21-Jul","planD":35,"planN":0,"presD":34,"presN":0,"pickD":34,"pickN":0,"tlD":2,"tlN":0,"mp":36,"proj":75000,"reqWorkforce":52,"actD":34421,"actN":0,"load":34421,"delta":40579,"deltaPct":45.89,"calcQty":48960,"ippD":127,"ippN":0,"dailyAvg":120,"targetIppHour":180,"ippShiftD":1012,"ippShiftN":0,"targetIppShift":1440},{"date":"22-Jul","planD":35,"planN":0,"presD":30,"presN":0,"pickD":30,"pickN":0,"tlD":2,"tlN":0,"mp":32,"proj":75000,"reqWorkforce":52,"actD":27658,"actN":0,"load":27658,"delta":47342,"deltaPct":36.88,"calcQty":43200,"ippD":115,"ippN":0,"dailyAvg":108,"targetIppHour":180,"ippShiftD":922,"ippShiftN":0,"targetIppShift":1440},{"date":"23-Jul","planD":26,"planN":12,"presD":17,"presN":11,"pickD":16,"pickN":11,"tlD":1,"tlN":1,"mp":30,"proj":75000,"reqWorkforce":52,"actD":16657,"actN":13210,"load":29867,"delta":45133,"deltaPct":22.21,"calcQty":24480,"ippD":130,"ippN":150,"dailyAvg":124,"targetIppHour":180,"ippShiftD":980,"ippShiftN":1201,"targetIppShift":1440},{"date":"24-Jul","planD":23,"planN":10,"presD":20,"presN":7,"pickD":20,"pickN":7,"tlD":1,"tlN":1,"mp":29,"proj":75000,"reqWorkforce":52,"actD":21564,"actN":8562,"load":30126,"delta":44874,"deltaPct":28.75,"calcQty":28800,"ippD":135,"ippN":153,"dailyAvg":130,"targetIppHour":180,"ippShiftD":1078,"ippShiftN":1223,"targetIppShift":1440},{"date":"25-Jul","planD":25,"planN":10,"presD":22,"presN":8,"pickD":22,"pickN":8,"tlD":1,"tlN":1,"mp":32,"proj":75000,"reqWorkforce":52,"actD":21186,"actN":8291,"load":29477,"delta":45523,"deltaPct":28.25,"calcQty":31680,"ippD":120,"ippN":130,"dailyAvg":115,"targetIppHour":180,"ippShiftD":963,"ippShiftN":1036,"targetIppShift":1440},{"date":"26-Jul","planD":19,"planN":13,"presD":19,"presN":11,"pickD":19,"pickN":11,"tlD":0,"tlN":1,"mp":31,"proj":75000,"reqWorkforce":52,"actD":25407,"actN":15210,"load":40617,"delta":34383,"deltaPct":33.88,"calcQty":27360,"ippD":167,"ippN":173,"dailyAvg":164,"targetIppHour":180,"ippShiftD":1337,"ippShiftN":1383,"targetIppShift":1440},{"date":"27-Jul","planD":18,"planN":14,"presD":18,"presN":11,"pickD":18,"pickN":11,"tlD":0,"tlN":1,"mp":30,"proj":75000,"reqWorkforce":52,"actD":21022,"actN":15333,"load":36355,"delta":38645,"deltaPct":28.03,"calcQty":25920,"ippD":146,"ippN":174,"dailyAvg":151,"targetIppHour":180,"ippShiftD":1168,"ippShiftN":1394,"targetIppShift":1440},{"date":"28-Jul","planD":17,"planN":16,"presD":16,"presN":15,"pickD":16,"pickN":15,"tlD":1,"tlN":1,"mp":33,"proj":75000,"reqWorkforce":52,"actD":21081,"actN":19676,"load":40757,"delta":34243,"deltaPct":28.11,"calcQty":23040,"ippD":165,"ippN":164,"dailyAvg":154,"targetIppHour":180,"ippShiftD":1318,"ippShiftN":1312,"targetIppShift":1440},{"date":"29-Jul","planD":17,"planN":16,"presD":17,"presN":15,"pickD":17,"pickN":15,"tlD":1,"tlN":1,"mp":34,"proj":75000,"reqWorkforce":52,"actD":20652,"actN":17473,"load":38125,"delta":36875,"deltaPct":27.54,"calcQty":24480,"ippD":152,"ippN":146,"dailyAvg":140,"targetIppHour":180,"ippShiftD":1215,"ippShiftN":1165,"targetIppShift":1440},{"date":"30-Jul","planD":18,"planN":16,"presD":16,"presN":11,"pickD":16,"pickN":11,"tlD":1,"tlN":1,"mp":29,"proj":75000,"reqWorkforce":52,"actD":17528,"actN":12270,"load":29798,"delta":45202,"deltaPct":23.37,"calcQty":23040,"ippD":137,"ippN":139,"dailyAvg":128,"targetIppHour":180,"ippShiftD":1096,"ippShiftN":1115,"targetIppShift":1440},{"date":"31-Jul","planD":18,"planN":13,"presD":17,"presN":12,"pickD":17,"pickN":12,"tlD":1,"tlN":1,"mp":31,"proj":75000,"reqWorkforce":52,"actD":18205,"actN":13449,"load":31654,"delta":43346,"deltaPct":24.27,"calcQty":24480,"ippD":134,"ippN":140,"dailyAvg":128,"targetIppHour":180,"ippShiftD":1071,"ippShiftN":1121,"targetIppShift":1440},{"date":"1-Aug","planD":19,"planN":11,"presD":15,"presN":7,"pickD":15,"pickN":7,"tlD":1,"tlN":0,"mp":23,"proj":75000,"reqWorkforce":52,"actD":19973,"actN":7273,"load":27246,"delta":55027,"deltaPct":26.63,"calcQty":21600,"ippD":166,"ippN":130,"dailyAvg":148,"targetIppHour":180,"ippShiftD":1332,"ippShiftN":1039,"targetIppShift":1440},{"date":"2-Aug","planD":16,"planN":9,"presD":16,"presN":6,"pickD":16,"pickN":6,"tlD":0,"tlN":1,"mp":23,"proj":75000,"reqWorkforce":52,"actD":18853,"actN":6830,"load":25683,"delta":56147,"deltaPct":25.14,"calcQty":23040,"ippD":147,"ippN":142,"dailyAvg":140,"targetIppHour":180,"ippShiftD":1178,"ippShiftN":1138,"targetIppShift":1440},{"date":"3-Aug","planD":14,"planN":12,"presD":14,"presN":9,"pickD":14,"pickN":9,"tlD":1,"tlN":1,"mp":25,"proj":75000,"reqWorkforce":52,"actD":14751,"actN":10681,"load":25432,"delta":60249,"deltaPct":19.67,"calcQty":20160,"ippD":132,"ippN":148,"dailyAvg":127,"targetIppHour":180,"ippShiftD":1054,"ippShiftN":1187,"targetIppShift":1440},{"date":"4-Aug","planD":17,"planN":12,"presD":16,"presN":12,"pickD":16,"pickN":12,"tlD":2,"tlN":1,"mp":31,"proj":75000,"reqWorkforce":52,"actD":20496,"actN":15732,"load":36228,"delta":54504,"deltaPct":27.33,"calcQty":23040,"ippD":160,"ippN":164,"dailyAvg":146,"targetIppHour":180,"ippShiftD":1281,"ippShiftN":1311,"targetIppShift":1440},{"date":"5-Aug","planD":17,"planN":10,"presD":12,"presN":9,"pickD":12,"pickN":9,"tlD":1,"tlN":1,"mp":23,"proj":75000,"reqWorkforce":52,"actD":14005,"actN":11171,"load":25176,"delta":60995,"deltaPct":18.67,"calcQty":17280,"ippD":146,"ippN":155,"dailyAvg":137,"targetIppHour":180,"ippShiftD":1167,"ippShiftN":1241,"targetIppShift":1440},{"date":"6-Aug","planD":18,"planN":10,"presD":15,"presN":8,"pickD":15,"pickN":8,"tlD":2,"tlN":1,"mp":26,"proj":75000,"reqWorkforce":52,"actD":16985,"actN":10966,"load":27951,"delta":58015,"deltaPct":22.65,"calcQty":21600,"ippD":142,"ippN":171,"dailyAvg":134,"targetIppHour":180,"ippShiftD":1132,"ippShiftN":1371,"targetIppShift":1440},{"date":"7-Aug","planD":15,"planN":15,"presD":13,"presN":8,"pickD":13,"pickN":8,"tlD":1,"tlN":2,"mp":24,"proj":75000,"reqWorkforce":52,"actD":17557,"actN":12942,"load":30499,"delta":57443,"deltaPct":23.41,"calcQty":18720,"ippD":169,"ippN":202,"dailyAvg":159,"targetIppHour":180,"ippShiftD":1351,"ippShiftN":1618,"targetIppShift":1440},{"date":"8-Aug","planD":14,"planN":15,"presD":10,"presN":9,"pickD":10,"pickN":9,"tlD":0,"tlN":2,"mp":21,"proj":75000,"reqWorkforce":52,"actD":16621,"actN":13052,"load":29673,"delta":58379,"deltaPct":22.16,"calcQty":14400,"ippD":208,"ippN":181,"dailyAvg":177,"targetIppHour":180,"ippShiftD":1662,"ippShiftN":1450,"targetIppShift":1440}]
+</script>
+<script>
+(function(){
+"use strict";
+
+/* ============================== CONFIG ============================== */
+var SHEET_ID = "1fIV4lYk-1cijkGsFl8xgKJF4oXWp3HETSzHJMRwR5Zo";
+var SHEET_GID = "1067706484";
+var TARGET_IPP = 180; // operating target — set dynamically from the sheet's own target column once data loads
+var FETCH_TIMEOUT_MS = 12000;
+
+var FALLBACK_DATA = JSON.parse(document.getElementById("daily-data-fallback").textContent);
+
+/* ============================== UTILITIES ============================== */
+function fmt(n, d){
+  d = d || 0;
+  return Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function mean(v){ return v.length ? v.reduce(function(a,b){return a+b;},0) / v.length : 0; }
+function monthOf(d){ return d.split("-")[1] || ""; }
+
+function niceMax(v){
+  if (v <= 0) return 10;
+  var mag = Math.pow(10, Math.floor(Math.log10(v)));
+  var norm = v / mag;
+  var step = norm <= 1 ? 1 : (norm <= 2 ? 2 : (norm <= 5 ? 5 : 10));
+  return step * mag;
+}
+function niceMaxFine(v){
+  if (v <= 0) return 10;
+  var mag = Math.pow(10, Math.floor(Math.log10(v)) - 1) || 1;
+  return Math.ceil(v / mag) * mag;
+}
+
+/* Catmull-Rom to cubic-bezier smoothing, tension 1/6 */
+function smoothPath(pts){
+  if (pts.length < 2) return "";
+  if (pts.length === 2) return "M "+pts[0][0].toFixed(2)+" "+pts[0][1].toFixed(2)+" L "+pts[1][0].toFixed(2)+" "+pts[1][1].toFixed(2);
+  var d = "M "+pts[0][0].toFixed(2)+" "+pts[0][1].toFixed(2)+" ";
+  for (var i=0;i<pts.length-1;i++){
+    var p0 = pts[i-1] || pts[i];
+    var p1 = pts[i];
+    var p2 = pts[i+1];
+    var p3 = pts[i+2] || p2;
+    var c1x = p1[0] + (p2[0]-p0[0])/6, c1y = p1[1] + (p2[1]-p0[1])/6;
+    var c2x = p2[0] - (p3[0]-p1[0])/6, c2y = p2[1] - (p3[1]-p1[1])/6;
+    d += "C "+c1x.toFixed(2)+" "+c1y.toFixed(2)+" "+c2x.toFixed(2)+" "+c2y.toFixed(2)+" "+p2[0].toFixed(2)+" "+p2[1].toFixed(2)+" ";
+  }
+  return d;
+}
+
+/* Replays a callback every time `el` scrolls into view, not just once */
+function observeReplay(el, cb){
+  if (!("IntersectionObserver" in window)){ return; }
+  var wasVisible = false;
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (en.isIntersecting && !wasVisible){ wasVisible = true; cb(); }
+      else if (!en.isIntersecting){ wasVisible = false; }
+    });
+  }, { threshold: 0.3 });
+  io.observe(el);
+}
+
+/* ============================== CSV FETCH + PARSE ============================== */
+function parseCSV(text){
+  var rows = [], row = [], field = "", inQuotes = false;
+  for (var i=0;i<text.length;i++){
+    var c = text[i];
+    if (inQuotes){
+      if (c === '"'){
+        if (text[i+1] === '"'){ field += '"'; i++; } else { inQuotes = false; }
+      } else { field += c; }
+    } else {
+      if (c === '"'){ inQuotes = true; }
+      else if (c === ","){ row.push(field); field = ""; }
+      else if (c === "\n"){ row.push(field); rows.push(row); row = []; field = ""; }
+      else if (c === "\r"){ /* skip */ }
+      else { field += c; }
+    }
+  }
+  if (field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+function numFrom(v){
+  if (v === undefined || v === null) return 0;
+  v = String(v).trim();
+  if (v === "" || /div\/0|#N\/A|#REF|#VALUE/i.test(v)) return 0;
+  v = v.replace(/%/g, "").replace(/,/g, "");
+  var n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+}
+
+var DATE_RE = /^\d{1,2}-[A-Za-z]{3,}$/;
+
+function rowsToData(csvRows){
+  var out = [];
+  csvRows.forEach(function(r){
+    var d = (r[0] || "").trim();
+    if (!DATE_RE.test(d)) return;
+    out.push({
+      date: d,
+      planD: numFrom(r[1]), planN: numFrom(r[2]),
+      presD: numFrom(r[3]), presN: numFrom(r[4]),
+      pickD: numFrom(r[5]), pickN: numFrom(r[6]),
+      tlD: numFrom(r[7]), tlN: numFrom(r[8]),
+      mp: numFrom(r[9]), proj: numFrom(r[10]), reqWorkforce: numFrom(r[11]),
+      actD: numFrom(r[12]), actN: numFrom(r[13]), load: numFrom(r[14]),
+      delta: numFrom(r[15]), deltaPct: numFrom(r[16]), calcQty: numFrom(r[17]),
+      ippD: numFrom(r[18]), ippN: numFrom(r[19]), dailyAvg: numFrom(r[20]),
+      targetIppHour: numFrom(r[21]), ippShiftD: numFrom(r[22]), ippShiftN: numFrom(r[23]),
+      targetIppShift: numFrom(r[24])
+    });
+  });
+  return out;
+}
+
+function fetchWithTimeout(url, ms){
+  var controller = ("AbortController" in window) ? new AbortController() : null;
+  var timer = controller ? setTimeout(function(){ controller.abort(); }, ms) : null;
+  return fetch(url, { cache: "no-store", signal: controller ? controller.signal : undefined })
+    .then(function(res){
+      if (timer) clearTimeout(timer);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.text();
+    })
+    .catch(function(err){
+      if (timer) clearTimeout(timer);
+      throw err;
+    });
+}
+
+function fetchLiveData(){
+  var bust = Date.now();
+  var gviz = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&gid=" + SHEET_GID + "&_=" + bust;
+  var exportUrl = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/export?format=csv&gid=" + SHEET_GID + "&_=" + bust;
+
+  function tryUrl(url){
+    return fetchWithTimeout(url, FETCH_TIMEOUT_MS).then(function(text){
+      var data = rowsToData(parseCSV(text));
+      if (!data.length) throw new Error("No valid rows parsed");
+      return data;
+    });
+  }
+
+  return tryUrl(gviz).catch(function(){ return tryUrl(exportUrl); });
+}
+
+/* ============================== ANALYSIS ============================== */
+function seriesStats(rows){
+  var ipp = rows.map(function(r){ return r.dailyAvg; });
+  return {
+    n: rows.length,
+    avg: mean(ipp),
+    best: ipp.length ? Math.max.apply(null, ipp) : 0,
+    worst: ipp.length ? Math.min.apply(null, ipp) : 0,
+    avgLoad: mean(rows.map(function(r){ return r.load; })),
+    avgMp: mean(rows.map(function(r){ return r.mp; })),
+    avgNightIpp: mean(rows.filter(function(r){ return r.ippN > 0; }).map(function(r){ return r.ippN; })),
+    avgFulfil: mean(rows.map(function(r){ return r.deltaPct; }))
+  };
+}
+
+function buildAnalysis(all){
+  var jun = all.filter(function(r){ return monthOf(r.date) === "Jun"; });
+  var jul = all.filter(function(r){ return monthOf(r.date) === "Jul"; });
+  var aug = all.filter(function(r){ return monthOf(r.date) === "Aug"; });
+  var last14 = all.slice(-14);
+  var prev14 = all.slice(-28, -14);
+
+  var overall = seriesStats(all);
+  var recent = seriesStats(last14);
+  var previous = seriesStats(prev14);
+
+  var totalProcessed = all.reduce(function(a,r){ return a + r.load; }, 0);
+  var totalProjection = all.reduce(function(a,r){ return a + r.proj; }, 0);
+  var fulfilment = totalProjection ? (totalProcessed / totalProjection) * 100 : 0;
+
+  var dayIpp = mean(all.filter(function(r){ return r.ippD > 0; }).map(function(r){ return r.ippD; }));
+  var nightIpp = mean(all.filter(function(r){ return r.ippN > 0; }).map(function(r){ return r.ippN; }));
+
+  var gap = TARGET_IPP - recent.avg;
+  var momentum = recent.avg - previous.avg;
+
+  var xs = last14.map(function(_,i){ return i; });
+  var ys = last14.map(function(r){ return r.dailyAvg; });
+  var mx = mean(xs), my = mean(ys);
+  var num = 0, den = 0;
+  for (var i=0;i<xs.length;i++){ num += (xs[i]-mx) * ((ys[i]||0)-my); den += (xs[i]-mx)*(xs[i]-mx); }
+  var slope = num / (den || 1);
+  var lastVal = ys[ys.length-1] || 0;
+  var daysToTarget = slope > 0 ? Math.ceil((TARGET_IPP - lastVal) / slope) : null;
+
+  var peak = all.reduce(function(a,r){ return r.dailyAvg > a.dailyAvg ? r : a; }, all[0] || {dailyAvg:0,date:"-"});
+
+  var nightStartRow = all.filter(function(r){ return r.presN > 0; })[0] || null;
+
+  var latest = all[all.length-1] || {};
+  var reqWorkforce = latest.reqWorkforce || 52;
+  var sheetTarget = latest.targetIppHour || 180;
+  var staffingGap = (latest.mp || 0) - reqWorkforce;
+
+  var last14Mp = mean(last14.map(function(r){ return r.mp; }));
+  var last14ReqAvg = mean(last14.map(function(r){ return r.reqWorkforce || reqWorkforce; }));
+
+  return {
+    all: all, jun: jun, jul: jul, aug: aug,
+    overall: overall, recent: recent, previous: previous,
+    totalProcessed: totalProcessed, totalProjection: totalProjection, fulfilment: fulfilment,
+    dayIpp: dayIpp, nightIpp: nightIpp,
+    gap: gap, momentum: momentum, slope: slope, daysToTarget: daysToTarget,
+    peak: peak, nightStartRow: nightStartRow,
+    reqWorkforce: reqWorkforce, sheetTarget: sheetTarget, staffingGap: staffingGap,
+    last14Mp: last14Mp, last14ReqAvg: last14ReqAvg,
+    latest: latest,
+    monthly: [
+      Object.assign({label:"June"}, seriesStats(jun)),
+      Object.assign({label:"July"}, seriesStats(jul)),
+      Object.assign({label:"August"}, seriesStats(aug))
+    ]
+  };
+}
+
+/* ============================== BOOTSTRAP ============================== */
+var loadingOverlay = document.getElementById("loadingOverlay");
+var contentWrap = document.getElementById("contentWrap");
+var statusPill = document.getElementById("statusPill");
+var statusDot = document.getElementById("statusDot");
+var statusText = document.getElementById("statusText");
+var refreshBtn = document.getElementById("refreshBtn");
+var loadingSub = document.getElementById("loadingSub");
+
+function showLoading(msg){
+  loadingOverlay.classList.remove("hide");
+  if (msg) loadingSub.textContent = msg;
+  contentWrap.classList.remove("ready");
+}
+function hideLoading(){
+  loadingOverlay.classList.add("hide");
+  requestAnimationFrame(function(){ contentWrap.classList.add("ready"); });
+}
+function setStatus(isLive, when){
+  statusPill.classList.toggle("is-live", !!isLive);
+  var stamp = when ? when.toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit"}) : "";
+  statusText.innerHTML = isLive
+    ? "Live · updated <span class=\"stamp\">"+stamp+"</span>"
+    : "Cached snapshot <span class=\"stamp\">(live sheet unavailable)</span>";
+}
+
+function boot(isRefresh){
+  if (isRefresh){ refreshBtn.classList.add("spinning"); }
+  showLoading(isRefresh ? "Reconnecting to the ARCOS Pickers Details sheet…" : "Pulling the latest rows from the ARCOS Pickers Details sheet…");
+  statusText.textContent = "Connecting…";
+  fetchLiveData().then(function(data){
+    init(data, true, new Date());
+  }).catch(function(err){
+    console.warn("Live sheet fetch failed, falling back to the last saved snapshot:", err);
+    init(FALLBACK_DATA, false, null);
+  }).then(function(){
+    refreshBtn.classList.remove("spinning");
+  });
+}
+refreshBtn.addEventListener("click", function(){ boot(true); });
+
+/* ============================== RENDER: INIT ============================== */
+var LAST_ANALYSIS = null;
+
+function init(dataset, isLive, fetchedAt){
+  var a = buildAnalysis(dataset);
+  TARGET_IPP = a.sheetTarget || 180;
+  a.gap = TARGET_IPP - a.recent.avg;
+  LAST_ANALYSIS = a;
+  var attainment = TARGET_IPP ? (a.recent.avg / TARGET_IPP) * 100 : 0;
+
+  setStatus(isLive, fetchedAt);
+
+  document.getElementById("ledeText").textContent =
+    "Blended IPP (items per picker-hour, day + night combined) tracked against the sheet's operating target of " +
+    TARGET_IPP + " IPP/hour, across " +
+    a.overall.n + " operating days from " + (a.all[0] ? a.all[0].date : "-") + " to " + (a.all[a.all.length-1] ? a.all[a.all.length-1].date : "-") + ".";
+
+  document.getElementById("mainChartSub").textContent =
+    "Daily blended rate · target " + fmt(TARGET_IPP,0);
+
+  document.getElementById("footerText").innerHTML =
+    "<span>Source: ARCOS Pickers Details sheet (tab gid " + SHEET_GID + ") · " + a.overall.n + " daily records</span>" +
+    "<span>" + (isLive ? "Fetched live on page load" : "Showing last saved snapshot — live fetch failed") + "</span>";
+
+  renderKpis(a, attainment);
+  renderMainChart(a.all);
+  renderMiniCharts(a);
+  renderInsights(a, attainment);
+  renderDayOnDayTable(a);
+  renderMonthlyTable(a);
+
+  hideLoading();
+}
+
+/* ============================== KPIs ============================== */
+function animateCountUp(el, target, decimals){
+  var start = performance.now();
+  var dur = 1100;
+  function tick(t){
+    var p = Math.min(1, (t - start) / dur);
+    var eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = fmt(target * eased, decimals);
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+var AVG_IPP_RANGES = [
+  { key:"full", label:"Full" },
+  { key:"30d", label:"Last 30 days" },
+  { key:"7d", label:"Last 7 days" },
+  { key:"24h", label:"Last 24 hours" }
+];
+
+function rowsForRange(all, key){
+  if (key === "24h") return all.slice(-1);
+  if (key === "7d") return all.slice(-7);
+  if (key === "30d") return all.slice(-30);
+  return all;
+}
+
+function rangeKpiStats(a, key){
+  var all = a.all;
+  var rows = rowsForRange(all, key);
+  var prevRows = key === "full" ? [] : all.slice(Math.max(0, all.length - rows.length*2), Math.max(0, all.length - rows.length));
+
+  var cur = seriesStats(rows);
+  var prev = seriesStats(prevRows);
+  var hasPrev = prevRows.length > 0;
+
+  var totalProcessed = rows.reduce(function(s,r){ return s + r.load; }, 0);
+  var totalProjection = rows.reduce(function(s,r){ return s + r.proj; }, 0);
+  var fulfilment = totalProjection ? (totalProcessed / totalProjection) * 100 : 0;
+
+  var prevProcessed = prevRows.reduce(function(s,r){ return s + r.load; }, 0);
+
+  var peak = rows.reduce(function(m,r){ return r.dailyAvg > m.dailyAvg ? r : m; }, rows[0] || {dailyAvg:0,date:"-"});
+
+  var latest = rows[rows.length-1] || {};
+  var reqWorkforce = latest.reqWorkforce || a.reqWorkforce;
+  var staffingGap = (latest.mp || 0) - reqWorkforce;
+
+  var dayIpp = mean(rows.filter(function(r){ return r.ippD > 0; }).map(function(r){ return r.ippD; }));
+  var nightIpp = mean(rows.filter(function(r){ return r.ippN > 0; }).map(function(r){ return r.ippN; }));
+
+  var attainment = TARGET_IPP ? (cur.avg / TARGET_IPP) * 100 : 0;
+  var gap = TARGET_IPP - cur.avg;
+
+  return {
+    avgIpp: cur.avg, avgMomentum: cur.avg - (hasPrev ? prev.avg : cur.avg), hasPrev: hasPrev,
+    attainment: attainment, gap: gap,
+    peak: peak,
+    totalProcessed: totalProcessed, fulfilment: fulfilment,
+    processedMomentum: totalProcessed - (hasPrev ? prevProcessed : totalProcessed),
+    reqWorkforce: reqWorkforce, staffingGap: staffingGap,
+    dayIpp: dayIpp, nightIpp: nightIpp
+  };
+}
+
+function renderKpis(a, attainment){
+  var kpiGrid = document.getElementById("kpiGrid");
+  kpiGrid.innerHTML = "";
+
+  function makeKpi(delayClass){
+    var el = document.createElement("div");
+    el.className = "panel kpi rise " + delayClass;
+    el.innerHTML =
+      '<p class="label"><span class="lbl"></span></p>' +
+      '<p class="value"><span class="num">0</span><span class="suffix"></span></p>' +
+      '<p class="hint"></p>';
+    kpiGrid.appendChild(el);
+    return {
+      root: el,
+      lbl: el.querySelector(".lbl"),
+      valueWrap: el.querySelector(".value"),
+      num: el.querySelector(".num"),
+      suffix: el.querySelector(".suffix"),
+      hint: el.querySelector(".hint")
+    };
+  }
+
+  var kAvg = makeKpi("d1");
+  var kAttain = makeKpi("d2");
+  var kPeak = makeKpi("d3");
+  var kUnits = makeKpi("d4");
+  var kStaff = makeKpi("d5");
+  var kNight = makeKpi("d6");
+
+  function setTone(box, tone){
+    box.valueWrap.className = "value " + (tone === "good" ? "tone-good" : (tone === "warn" ? "tone-warn" : ""));
+  }
+
+  function paintKpis(key){
+    var s = rangeKpiStats(a, key);
+    var rangeLabel = AVG_IPP_RANGES.filter(function(r){ return r.key === key; })[0].label;
+
+    kAvg.lbl.textContent = rangeLabel + " avg IPP";
+    setTone(kAvg, s.avgMomentum >= 0 ? "good" : "warn");
+    animateCountUp(kAvg.num, s.avgIpp, 1);
+    kAvg.hint.textContent = s.hasPrev
+      ? (s.avgMomentum >= 0 ? "+" : "") + fmt(s.avgMomentum,1) + " vs prior period"
+      : "Across " + a.overall.n + " operating days on record";
+
+    kAttain.lbl.textContent = "Target attainment";
+    kAttain.suffix.textContent = "%";
+    setTone(kAttain, s.attainment >= 90 ? "good" : "warn");
+    animateCountUp(kAttain.num, s.attainment, 1);
+    kAttain.hint.textContent = fmt(s.gap,1) + " IPP to close vs target " + fmt(TARGET_IPP,0);
+
+    kPeak.lbl.textContent = "Peak day";
+    setTone(kPeak, "default");
+    animateCountUp(kPeak.num, s.peak.dailyAvg, 0);
+    kPeak.hint.textContent = "Recorded on " + s.peak.date;
+
+    kUnits.lbl.textContent = "Units processed";
+    setTone(kUnits, "default");
+    animateCountUp(kUnits.num, s.totalProcessed, 0);
+    kUnits.hint.textContent = fmt(s.fulfilment,1) + "% of projected load";
+
+    kStaff.lbl.textContent = "Latest staffing gap";
+    setTone(kStaff, s.staffingGap >= 0 ? "good" : "warn");
+    animateCountUp(kStaff.num, Math.abs(s.staffingGap), 0);
+    kStaff.hint.textContent = (s.staffingGap>=0?"+":"−") + fmt(Math.abs(s.staffingGap),0) + " vs required " + fmt(s.reqWorkforce,0);
+
+    kNight.lbl.textContent = "Night shift avg IPP";
+    setTone(kNight, s.nightIpp >= s.dayIpp ? "good" : "warn");
+    animateCountUp(kNight.num, s.nightIpp, 1);
+    kNight.hint.textContent = "vs " + fmt(s.dayIpp,1) + " IPP on day shift";
+  }
+
+  var tabsEl = document.getElementById("avgIppTabs");
+  tabsEl.innerHTML = "";
+  AVG_IPP_RANGES.forEach(function(r){
+    var b = document.createElement("button");
+    b.textContent = r.label;
+    b.className = r.key === "full" ? "active" : "";
+    b.addEventListener("click", function(){
+      Array.prototype.forEach.call(tabsEl.children, function(btn){ btn.classList.remove("active"); });
+      b.classList.add("active");
+      paintKpis(r.key);
+    });
+    tabsEl.appendChild(b);
+  });
+  paintKpis("full");
+}
+
+/* ============================== INSIGHT CARDS ============================== */
+function renderInsights(a, attainment){
+  var nightMinusDay = a.nightIpp - a.dayIpp;
+  var monthLift = fmt(((a.monthly[2].avg || 0) / (a.monthly[0].avg || 1) - 1) * 100, 0);
+  var daysToTargetText = a.daysToTarget
+    ? "Holding the current improvement rate, target is reached in roughly " + a.daysToTarget + " operating days."
+    : "At the current flat slope, target will not be reached without an intervention.";
+  var nightStartText = a.nightStartRow ? a.nightStartRow.date : "the sheet's first night record";
+  var staffText = a.staffingGap >= 0
+    ? "currently running " + fmt(a.staffingGap,0) + " head above the required workforce"
+    : "currently running " + fmt(Math.abs(a.staffingGap),0) + " head short of the required workforce";
+
+  document.getElementById("insightsSub").textContent =
+    "A statistical read of the full sheet: manpower plan vs attendance, day/night split, processed volume against projection, and the trajectory toward the " + fmt(TARGET_IPP,0) + " IPP target.";
+
+  var insightDefs = [
+    { title:"1. A strong, sustained upward trend",
+      body:"Monthly means move from "+fmt(a.monthly[0].avg,1)+" IPP in June to "+fmt(a.monthly[1].avg,1)+" in July and "+fmt(a.monthly[2].avg,1)+" in August — a "+monthLift+"% lift over the period. The last 14 days regress at a slope of "+fmt(a.slope,2)+" IPP/day, so the trend is still positive rather than plateaued." },
+    { title:"2. Reading target attainment",
+      body:"Recent blended output averages "+fmt(a.recent.avg,1)+" IPP against the sheet's operating target of "+fmt(TARGET_IPP,0)+" IPP/hour — "+fmt(attainment,1)+"% attainment, a shortfall of "+fmt(a.gap,1)+" IPP. "+daysToTargetText },
+    { title:"3. Night shift now outperforms day",
+      body:"Mean night IPP is "+fmt(a.nightIpp,1)+" against "+fmt(a.dayIpp,1)+" for day — a "+fmt(nightMinusDay,1)+" IPP spread since night operations began on "+nightStartText+". Night runs leaner headcount on comparable volume, which points at day-shift losses from interruptions, task switching and idle manpower rather than a raw capability gap." },
+    { title:"4. Volume, not productivity, is the constraint",
+      body:"Cumulative processed volume is "+fmt(a.totalProcessed)+" units against a projected "+fmt(a.totalProjection)+" — "+fmt(a.fulfilment,1)+"% fulfilment. Daily manpower averages "+fmt(a.overall.avgMp,1)+" against a required workforce of "+fmt(a.reqWorkforce,0)+", so the backlog is primarily a staffing-capacity deficit that higher IPP alone cannot clear." },
+    { title:"5. Volatility is the hidden cost",
+      body:"Blended IPP ranges from "+fmt(a.recent.worst)+" to "+fmt(a.recent.best)+" within the last 14 days alone. That day-to-day dispersion makes planning unreliable; stabilising the floor is usually worth more than chasing new peaks." },
+    { title:"6. Staffing is close to plan, on average",
+      body:"Over the last 14 days, average total manpower is "+fmt(a.last14Mp,1)+" against an average requirement of "+fmt(a.last14ReqAvg,1)+". The most recent day is "+staffText+" ("+fmt(a.latest.mp||0,0)+" present vs "+fmt(a.reqWorkforce,0)+" required), which tracks closely with day-to-day swings in fulfilment." },
+    { title:"7. Shift-level throughput is climbing too",
+      body:"Blended output per shift (not just per hour) now runs well above the "+fmt((a.all[a.all.length-1]||{}).targetIppShift||1440,0)+"-unit shift target on strong days, driven by the same day/night mix shift described above rather than by longer shifts." },
+    { title:"8. What to act on", list:[
+        "Port night-shift practices into day operations to close the "+fmt(nightMinusDay,0)+" IPP spread.",
+        "Hold attendance at or above the required "+fmt(a.reqWorkforce,0)+"-head workforce to keep attacking the volume backlog.",
+        "Manage to the daily floor, not the average — variance is the main risk to the "+fmt(TARGET_IPP,0)+" IPP target."
+      ]}
+  ];
+
+  var cardsWrap = document.getElementById("insightCards");
+  cardsWrap.innerHTML = "";
+  insightDefs.forEach(function(c){
+    var el = document.createElement("article");
+    el.className = "panel card";
+    if (c.list){
+      el.innerHTML = "<h3>"+c.title+"</h3><ul>" + c.list.map(function(li){ return "<li>· "+li+"</li>"; }).join("") + "</ul>";
+    } else {
+      el.innerHTML = "<h3>"+c.title+"</h3><p>"+c.body+"</p>";
+    }
+    cardsWrap.appendChild(el);
+  });
+}
+
+/* ============================== DAY ON DAY TABLE ============================== */
+function renderDayOnDayTable(a){
+  var rows = a.all.slice(-14); // last 14 operating days, consecutive deltas vs the prior sheet row
+  var startIdx = a.all.length - rows.length;
+  var tbody = document.getElementById("dayOnDayRows");
+  tbody.innerHTML = "";
+  rows.forEach(function(r, i){
+    var globalIdx = startIdx + i;
+    var prev = a.all[globalIdx - 1] || null;
+    var dIpp = prev ? r.dailyAvg - prev.dailyAvg : null;
+    var dPct = prev && prev.dailyAvg ? (dIpp / prev.dailyAvg) * 100 : null;
+    var dMp = prev ? r.mp - prev.mp : null;
+    var dVol = prev ? r.load - prev.load : null;
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td class="month">'+r.date+'</td>' +
+      '<td class="accent">'+fmt(r.dailyAvg,0)+'</td>' +
+      '<td class="'+(dIpp===null?"muted":(dIpp>=0?"tone-good":"tone-warn"))+'">'+(dIpp===null?"—":(dIpp>=0?"+":"")+fmt(dIpp,0))+'</td>' +
+      '<td class="'+(dPct===null?"muted":(dPct>=0?"tone-good":"tone-warn"))+'">'+(dPct===null?"—":(dPct>=0?"+":"")+fmt(dPct,1)+"%")+'</td>' +
+      '<td class="muted">'+fmt(r.mp,0)+'</td>' +
+      '<td class="'+(dMp===null?"muted":(dMp>=0?"tone-good":"tone-warn"))+'">'+(dMp===null?"—":(dMp>=0?"+":"")+fmt(dMp,0))+'</td>' +
+      '<td class="muted">'+fmt(r.load,0)+'</td>' +
+      '<td class="'+(dVol===null?"muted":(dVol>=0?"tone-good":"tone-warn"))+'">'+(dVol===null?"—":(dVol>=0?"+":"")+fmt(dVol,0))+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+/* ============================== MONTH ON MONTH TABLE ============================== */
+function renderMonthlyTable(a){
+  var monthlyRows = document.getElementById("monthlyRows");
+  monthlyRows.innerHTML = "";
+  var prevAvg = null;
+  a.monthly.forEach(function(m){
+    if (!m.n) return;
+    var dIpp = prevAvg === null ? null : m.avg - prevAvg;
+    var dPct = (prevAvg === null || !prevAvg) ? null : (dIpp / prevAvg) * 100;
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td class="month">'+m.label+'</td>' +
+      '<td class="muted">'+m.n+'</td>' +
+      '<td class="accent">'+fmt(m.avg,1)+'</td>' +
+      '<td class="'+(dIpp===null?"muted":(dIpp>=0?"tone-good":"tone-warn"))+'">'+(dIpp===null?"—":(dIpp>=0?"+":"")+fmt(dIpp,1))+'</td>' +
+      '<td class="'+(dPct===null?"muted":(dPct>=0?"tone-good":"tone-warn"))+'">'+(dPct===null?"—":(dPct>=0?"+":"")+fmt(dPct,1)+"%")+'</td>' +
+      '<td class="muted">'+fmt(m.best)+'</td>' +
+      '<td class="muted">'+fmt(m.avgMp,1)+'</td>' +
+      '<td class="muted">'+fmt(m.avgLoad)+'</td>' +
+      '<td class="muted">'+fmt(m.avgFulfil,1)+'%</td>' +
+      '<td class="muted">'+(m.avgNightIpp ? fmt(m.avgNightIpp,1) : "—")+'</td>';
+    monthlyRows.appendChild(tr);
+    prevAvg = m.avg;
+  });
+}
+
+/* ============================== SAVE AS PDF ============================== */
+document.getElementById("pdfBtn").addEventListener("click", function(){ window.print(); });
+
+/* ============================== MAIN CHART (zoom / pan / range) ============================== */
+var RANGES = [
+  { key:"full", label:"Full" },
+  { key:"30d", label:"Last 30 days" },
+  { key:"7d", label:"Last 7 days" },
+  { key:"24h", label:"Last 24 hours" }
+];
+
+var rangeTabsEl = document.getElementById("rangeTabs");
+var range = "full";
+var mainDataset = [];
+var win = null;
+
+function toPoints(rows, rng){
+  if (rng === "24h"){
+    var last = rows[rows.length-1];
+    if (!last) return [];
+    return [
+      { date: last.date + " · Day", dailyAvg:last.ippD, ippD:last.ippD, ippN:0, mp:last.presD, load:last.actD },
+      { date: last.date + " · Night", dailyAvg:last.ippN, ippD:0, ippN:last.ippN, mp:last.presN, load:last.actN }
+    ];
+  }
+  var n = rng === "30d" ? 30 : (rng === "7d" ? 7 : rows.length);
+  return rows.slice(-n).map(function(r){
+    return { date:r.date, dailyAvg:r.dailyAvg, ippD:r.ippD, ippN:r.ippN, mp:r.mp, load:r.load };
+  });
+}
+
+RANGES.forEach(function(r){
+  var b = document.createElement("button");
+  b.textContent = r.label;
+  b.className = r.key === range ? "active" : "";
+  b.addEventListener("click", function(){
+    range = r.key;
+    Array.prototype.forEach.call(rangeTabsEl.children, function(btn){ btn.classList.remove("active"); });
+    b.classList.add("active");
+    win = null;
+    renderChart(true);
+  });
+  rangeTabsEl.appendChild(b);
+});
+
+var chartShell = document.getElementById("chartShell");
+var svg = document.getElementById("chartSvg");
+var tooltip = document.getElementById("tooltip");
+var zoomResetBtn = document.getElementById("zoomReset");
+var PAD = { top:14, right:20, bottom:28, left:44 };
+var VB_W = 1000, VB_H = 420;
+
+function getBase(){ return toPoints(mainDataset, range); }
+
+function clampWin(w, len){
+  if (!w) return { s:0, e: Math.max(0,len-1) };
+  var s = Math.max(0, Math.min(len-1, w.s));
+  var e = Math.max(s, Math.min(len-1, w.e));
+  return { s:s, e:e };
+}
+
+function applyZoom(factor, anchor){
+  var base = getBase();
+  if (!win || base.length < 4) return;
+  var span = win.e - win.s;
+  var next = Math.max(2, Math.min(base.length - 1, Math.round(span * factor)));
+  var pivot = win.s + anchor * span;
+  var s = Math.round(pivot - anchor * next);
+  s = Math.max(0, Math.min(base.length - 1 - next, s));
+  win = { s:s, e:s+next };
+  renderChart(false);
+}
+
+document.getElementById("zoomIn").addEventListener("click", function(){ applyZoom(0.7, 0.5); });
+document.getElementById("zoomOut").addEventListener("click", function(){ applyZoom(1.4, 0.5); });
+zoomResetBtn.addEventListener("click", function(){
+  var base = getBase();
+  win = { s:0, e: base.length-1 };
+  renderChart(false);
+});
+
+chartShell.addEventListener("wheel", function(e){
+  e.preventDefault();
+  var dy = e.deltaY * (e.deltaMode === 1 ? 16 : (e.deltaMode === 2 ? 100 : 1));
+  var rect = chartShell.getBoundingClientRect();
+  var anchor = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+  applyZoom(Math.exp(dy * 0.0015), anchor);
+}, { passive:false });
+
+var drag = null;
+chartShell.addEventListener("pointerdown", function(e){
+  if (!win) return;
+  drag = { x:e.clientX, s:win.s, e:win.e };
+  chartShell.classList.add("grabbing");
+  try { chartShell.setPointerCapture(e.pointerId); } catch(err){}
+});
+chartShell.addEventListener("pointermove", function(e){
+  if (drag){
+    var base = getBase();
+    var span = drag.e - drag.s;
+    var rect = chartShell.getBoundingClientRect();
+    var perPx = span / rect.width;
+    var shift = Math.round((drag.x - e.clientX) * perPx);
+    var s = Math.max(0, Math.min(base.length - 1 - span, drag.s + shift));
+    win = { s:s, e:s+span };
+    renderChart(false);
+  } else {
+    hoverAt(e);
+  }
+});
+chartShell.addEventListener("pointerup", function(){ drag = null; chartShell.classList.remove("grabbing"); });
+chartShell.addEventListener("pointerleave", function(){ drag = null; chartShell.classList.remove("grabbing"); hideTooltip(); });
+
+var lastScales = null;
+
+function hoverAt(e){
+  if (!lastScales) return;
+  var rect = chartShell.getBoundingClientRect();
+  var xFrac = (e.clientX - rect.left) / rect.width;
+  var xPx = PAD.left + xFrac * (VB_W - PAD.left - PAD.right);
+  var pts = lastScales.view;
+  if (!pts.length) return;
+  var idx = 0, best = Infinity;
+  for (var i=0;i<pts.length;i++){
+    var px = lastScales.x(i);
+    var d = Math.abs(px - xPx);
+    if (d < best){ best = d; idx = i; }
+  }
+  var row = pts[idx];
+  var cx = lastScales.x(idx), cy = lastScales.y(row.dailyAvg);
+  var svgRect = svg.getBoundingClientRect();
+  var scaleX = svgRect.width / VB_W, scaleY = svgRect.height / VB_H;
+  var fixedLeft = svgRect.left + cx * scaleX;
+  var fixedTop = svgRect.top + cy * scaleY;
+  /* keep the tooltip on-screen near viewport edges */
+  fixedLeft = Math.min(Math.max(fixedLeft, 90), window.innerWidth - 90);
+  fixedTop = Math.max(fixedTop, 70);
+  tooltip.style.left = fixedLeft + "px";
+  tooltip.style.top = fixedTop + "px";
+  tooltip.style.transform = "translate(-50%, -115%)";
+  tooltip.innerHTML =
+    '<p class="t-title">'+row.date+'</p>' +
+    '<p>IPP <span class="acc">'+fmt(row.dailyAvg)+'</span> / target '+fmt(TARGET_IPP,0)+'</p>' +
+    '<p>Day '+fmt(row.ippD)+' · Night '+fmt(row.ippN)+' · Manpower '+fmt(row.mp)+'</p>' +
+    '<p>Processed '+fmt(row.load)+' units</p>';
+  tooltip.classList.add("show");
+
+  var hoverG = document.getElementById("chartHover");
+  hoverG.innerHTML =
+    '<line x1="'+cx+'" y1="'+PAD.top+'" x2="'+cx+'" y2="'+(VB_H-PAD.bottom)+'" stroke="var(--border)" stroke-width="1"/>' +
+    '<circle cx="'+cx+'" cy="'+cy+'" r="5" fill="var(--accent)"/>';
+}
+function hideTooltip(){
+  tooltip.classList.remove("show");
+  document.getElementById("chartHover").innerHTML = "";
+}
+
+function renderChart(resetWindow){
+  var base = getBase();
+  if (resetWindow || !win){
+    win = base.length ? { s:0, e:base.length-1 } : { s:0, e:0 };
+  }
+  win = clampWin(win, base.length);
+  var view = base.length ? base.slice(win.s, win.e+1) : [];
+  var zoomed = base.length > 1 && (win.s > 0 || win.e < base.length - 1);
+  zoomResetBtn.style.display = zoomed ? "inline-block" : "none";
+
+  var plotW = VB_W - PAD.left - PAD.right;
+  var plotH = VB_H - PAD.top - PAD.bottom;
+
+  var maxVal = view.length ? Math.max.apply(null, view.map(function(p){return p.dailyAvg;})) : 0;
+  var refMax = TARGET_IPP;
+  var maxY = Math.max(refMax + 40, maxVal) * 1.05;
+  maxY = Math.round(maxY);
+
+  function xScale(i){
+    if (view.length <= 1) return PAD.left + plotW/2;
+    return PAD.left + (i/(view.length-1)) * plotW;
+  }
+  function yScale(v){
+    return PAD.top + (1 - v/maxY) * plotH;
+  }
+  lastScales = { view:view, x:xScale, y:yScale };
+
+  /* grid + axes */
+  var gridSteps = 4;
+  var gridEl = document.getElementById("chartGrid");
+  var axisYEl = document.getElementById("chartAxisY");
+  var g = "", ay = "";
+  for (var s=0; s<=gridSteps; s++){
+    var val = Math.round((maxY/gridSteps) * s);
+    var y = yScale(val);
+    g += '<line class="grid-line" x1="'+PAD.left+'" y1="'+y+'" x2="'+(VB_W-PAD.right)+'" y2="'+y+'"/>';
+    ay += '<text class="axis-label" x="'+(PAD.left-10)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(val)+'</text>';
+  }
+  gridEl.innerHTML = g;
+  axisYEl.innerHTML = ay;
+
+  var axisXEl = document.getElementById("chartAxisX");
+  var ax = "";
+  var tickEvery = Math.max(1, Math.ceil(view.length / 9));
+  for (var i=0;i<view.length;i++){
+    if (i % tickEvery === 0 || i === view.length-1){
+      var x = xScale(i);
+      ax += '<text class="axis-label" x="'+x+'" y="'+(VB_H-PAD.bottom+18)+'" text-anchor="middle">'+view[i].date+'</text>';
+    }
+  }
+  axisXEl.innerHTML = ax;
+
+  /* reference line: single operating target from the sheet */
+  var refY = yScale(TARGET_IPP);
+  var refHTML =
+    '<line class="ref-line" x1="'+PAD.left+'" y1="'+refY+'" x2="'+(VB_W-PAD.right)+'" y2="'+refY+'"/>' +
+    '<text class="ref-label" x="'+(VB_W-PAD.right-4)+'" y="'+(refY-6)+'" text-anchor="end">Target '+fmt(TARGET_IPP,0)+'</text>';
+  document.getElementById("chartRef").innerHTML = refHTML;
+
+  /* smooth line + area paths */
+  var linePath = "", areaPath = "";
+  if (view.length){
+    var pts = view.map(function(p,i){ return [xScale(i), yScale(p.dailyAvg)]; });
+    linePath = smoothPath(pts);
+    areaPath = linePath + " L " + xScale(view.length-1).toFixed(2) + " " + (VB_H-PAD.bottom) + " L " + xScale(0).toFixed(2) + " " + (VB_H-PAD.bottom) + " Z";
+  }
+
+  var lineEl = document.getElementById("chartLinePath");
+  var areaEl = document.getElementById("chartAreaPath");
+  areaEl.setAttribute("fill", "url(#ippFill)");
+  areaEl.setAttribute("d", areaPath);
+  areaEl.classList.remove("in");
+
+  lineEl.setAttribute("d", linePath);
+  var len = view.length ? lineEl.getTotalLength() : 0;
+  lineEl.style.transition = "none";
+  lineEl.style.strokeDasharray = len;
+  lineEl.style.strokeDashoffset = len;
+  void lineEl.getBoundingClientRect();
+  requestAnimationFrame(function(){
+    lineEl.style.transition = "stroke-dashoffset 1.5s cubic-bezier(.22,1,.36,1)";
+    lineEl.style.strokeDashoffset = 0;
+    areaEl.classList.add("in");
+  });
+
+  /* point markers on every data point */
+  var pointsG = document.getElementById("chartPoints");
+  if (view.length){
+    var dotsHTML = "";
+    for (var pi=0; pi<view.length; pi++){
+      var px = xScale(pi), py = yScale(view[pi].dailyAvg);
+      dotsHTML += '<circle cx="'+px.toFixed(2)+'" cy="'+py.toFixed(2)+'" r="3.4" fill="var(--background)" stroke="var(--accent)" stroke-width="1.8"></circle>';
+    }
+    pointsG.innerHTML = dotsHTML;
+  } else {
+    pointsG.innerHTML = "";
+  }
+
+  /* live dot on last visible point */
+  var liveG = document.getElementById("chartLive");
+  if (view.length){
+    var lx = xScale(view.length-1), ly = yScale(view[view.length-1].dailyAvg);
+    liveG.innerHTML =
+      '<circle cx="'+lx+'" cy="'+ly+'" r="6" fill="var(--success)" opacity="0.35">' +
+        '<animate attributeName="r" values="6;18;6" dur="2.2s" repeatCount="indefinite"/>' +
+        '<animate attributeName="opacity" values="0.45;0;0.45" dur="2.2s" repeatCount="indefinite"/>' +
+      '</circle>' +
+      '<circle cx="'+lx+'" cy="'+ly+'" r="10" fill="var(--success)" opacity="0.15"/>' +
+      '<circle cx="'+lx+'" cy="'+ly+'" r="4.5" fill="var(--success)" stroke="var(--background)" stroke-width="1.5">' +
+        '<animate attributeName="r" values="4.5;5.6;4.5" dur="1.4s" repeatCount="indefinite"/>' +
+      '</circle>';
+  } else {
+    liveG.innerHTML = "";
+  }
+
+  hideTooltip();
+}
+
+function renderMainChart(dataset){
+  mainDataset = dataset;
+  range = "full";
+  win = null;
+  Array.prototype.forEach.call(rangeTabsEl.children, function(btn, i){ btn.classList.toggle("active", RANGES[i].key === "full"); });
+  renderChart(true);
+}
+
+window.addEventListener("resize", function(){ if (mainDataset.length) renderChart(false); });
+observeReplay(document.getElementById("productivity-chart"), function(){ if (mainDataset.length) renderChart(false); });
+
+/* ============================== SECONDARY CHARTS ============================== */
+function mountMiniChart(containerId, opts){
+  var root = document.getElementById(containerId);
+  var svgEl = root.querySelector(".chart-shell svg");
+  var legendEl = root.querySelector(".legend");
+  var tooltipEl = root.querySelector(".tooltip");
+  var shellEl = root.querySelector(".chart-shell");
+  var gridG = svgEl.querySelector(".gridG");
+  var axisXG = svgEl.querySelector(".axisXG");
+  var axisYG = svgEl.querySelector(".axisYG");
+  var refG = svgEl.querySelector(".refG");
+  var seriesG = svgEl.querySelector(".seriesG");
+  var hoverG = svgEl.querySelector(".hoverG");
+
+  var VBW = 1000, VBH = 300;
+  var PADm = { top:12, right:16, bottom:26, left:46 };
+  var plotW = VBW - PADm.left - PADm.right, plotH = VBH - PADm.top - PADm.bottom;
+
+  function render(){
+    var data = opts.data;
+    var n = data.length;
+
+    var allVals = [];
+    opts.series.forEach(function(s){ data.forEach(function(r){ allVals.push(r[s.key] || 0); }); });
+    (opts.refLines || []).forEach(function(rl){ allVals.push(rl.value); });
+    var maxVal = allVals.length ? Math.max.apply(null, allVals) : 1;
+    var maxY = opts.yMaxOverride || niceMaxFine(maxVal * 1.08);
+    var minY = 0;
+
+    function xScale(i){ return n <= 1 ? PADm.left + plotW/2 : PADm.left + (i/(n-1)) * plotW; }
+    function yScale(v){ return PADm.top + (1 - (v-minY)/(maxY-minY || 1)) * plotH; }
+
+    var steps = 4, g = "", ay = "";
+    for (var s=0; s<=steps; s++){
+      var val = minY + ((maxY-minY)/steps) * s;
+      var y = yScale(val);
+      g += '<line class="grid-line" x1="'+PADm.left+'" y1="'+y+'" x2="'+(VBW-PADm.right)+'" y2="'+y+'"/>';
+      ay += '<text class="axis-label" x="'+(PADm.left-8)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(val, opts.decimals||0)+'</text>';
+    }
+    gridG.innerHTML = g; axisYG.innerHTML = ay;
+
+    var ax = "", tickEvery = Math.max(1, Math.ceil(n/7));
+    for (var i=0;i<n;i++){
+      if (i % tickEvery === 0 || i === n-1){
+        ax += '<text class="axis-label" x="'+xScale(i)+'" y="'+(VBH-PADm.bottom+16)+'" text-anchor="middle">'+data[i].date+'</text>';
+      }
+    }
+    axisXG.innerHTML = ax;
+
+    var rg = "";
+    (opts.refLines || []).forEach(function(rl){
+      var ry = yScale(rl.value);
+      rg += '<line x1="'+PADm.left+'" y1="'+ry+'" x2="'+(VBW-PADm.right)+'" y2="'+ry+'" stroke="'+rl.color+'" stroke-width="1.2" stroke-dasharray="5 5"/>';
+      rg += '<text x="'+(VBW-PADm.right-4)+'" y="'+(ry-5)+'" text-anchor="end" font-size="10" font-family="var(--font-sans)" fill="'+rl.color+'">'+rl.label+'</text>';
+    });
+    refG.innerHTML = rg;
+
+    var seriesHTML = "";
+    var lineIds = [];
+    opts.series.forEach(function(s, si){
+      var pts = data.map(function(r,i){ return [xScale(i), yScale(r[s.key] || 0)]; });
+      var d = smoothPath(pts);
+      var pid = containerId + "-line-" + si;
+      if (opts.areaSeriesIndex === si){
+        var gradId = containerId + "-grad-" + si;
+        var areaD = d + " L " + xScale(n-1).toFixed(2) + " " + (PADm.top+plotH) + " L " + xScale(0).toFixed(2) + " " + (PADm.top+plotH) + " Z";
+        seriesHTML += '<defs><linearGradient id="'+gradId+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+s.color+'" stop-opacity="0.42"/><stop offset="100%" stop-color="'+s.color+'" stop-opacity="0"/></linearGradient></defs>';
+        seriesHTML += '<path d="'+areaD+'" fill="url(#'+gradId+')" stroke="none"></path>';
+      }
+      seriesHTML += '<path id="'+pid+'" class="mini-line" d="'+d+'" stroke="'+s.color+'"></path>';
+      var dotsHTML = "";
+      for (var pi=0; pi<pts.length; pi++){
+        dotsHTML += '<circle cx="'+pts[pi][0].toFixed(2)+'" cy="'+pts[pi][1].toFixed(2)+'" r="2.6" fill="var(--background)" stroke="'+s.color+'" stroke-width="1.5"></circle>';
+      }
+      seriesHTML += '<g>'+dotsHTML+'</g>';
+      lineIds.push(pid);
+    });
+    seriesG.innerHTML = seriesHTML;
+
+    legendEl.innerHTML = opts.series.map(function(s){
+      return '<span class="swatch"><span class="bar" style="background:'+s.color+'"></span> '+s.label+'</span>';
+    }).join("") + (opts.refLines || []).map(function(rl){
+      return '<span class="swatch"><span class="bar" style="background:'+rl.color+';opacity:.55"></span> '+rl.label+'</span>';
+    }).join("");
+
+    /* draw-in animation, replayed every time render() is called */
+    lineIds.forEach(function(pid, idx){
+      var el = document.getElementById(pid);
+      if (!el) return;
+      var len = el.getTotalLength();
+      el.style.transition = "none";
+      el.style.strokeDasharray = len;
+      el.style.strokeDashoffset = len;
+      void el.getBoundingClientRect();
+      setTimeout(function(){
+        el.style.transition = "stroke-dashoffset 1.3s cubic-bezier(.22,1,.36,1)";
+        el.style.strokeDashoffset = 0;
+      }, idx * 130);
+    });
+
+    shellEl.onpointermove = function(e){
+      var rect = shellEl.getBoundingClientRect();
+      var xFrac = (e.clientX - rect.left) / rect.width;
+      var xPx = PADm.left + xFrac * plotW;
+      var idx = 0, best = Infinity;
+      for (var k=0;k<n;k++){ var dd = Math.abs(xScale(k)-xPx); if (dd < best){ best = dd; idx = k; } }
+      var row = data[idx];
+      if (!row) return;
+      var cx = xScale(idx);
+      var svgRect = svgEl.getBoundingClientRect();
+      var scaleX = svgRect.width / VBW, scaleY = svgRect.height / VBH;
+      var lines = opts.series.map(function(s){ return s.label + ": " + fmt(row[s.key] || 0, opts.decimals||0) + (opts.unit||""); }).join(" · ");
+      tooltipEl.innerHTML = '<p class="t-title">'+row.date+'</p><p>'+lines+'</p>';
+      var cy = yScale(row[opts.series[0].key] || 0);
+      var fixedLeft = svgRect.left + cx*scaleX;
+      var fixedTop = svgRect.top + cy*scaleY;
+      fixedLeft = Math.min(Math.max(fixedLeft, 90), window.innerWidth - 90);
+      fixedTop = Math.max(fixedTop, 70);
+      tooltipEl.style.left = fixedLeft + "px";
+      tooltipEl.style.top = fixedTop + "px";
+      tooltipEl.style.transform = "translate(-50%, -115%)";
+      tooltipEl.classList.add("show");
+      hoverG.innerHTML = '<line x1="'+cx+'" y1="'+PADm.top+'" x2="'+cx+'" y2="'+(PADm.top+plotH)+'" stroke="var(--border)" stroke-width="1"/>';
+    };
+    shellEl.onpointerleave = function(){ tooltipEl.classList.remove("show"); hoverG.innerHTML = ""; };
+  }
+
+  render();
+  observeReplay(root, render);
+}
+
+function renderMiniCharts(a){
+  var all = a.all;
+
+  document.getElementById("daynightSub").textContent = a.nightStartRow
+    ? "Hourly IPP split since night shift began ("+a.nightStartRow.date+")"
+    : "Hourly IPP split across shifts";
+  document.getElementById("manpowerSub").textContent = "Total present headcount against the "+fmt(a.reqWorkforce,0)+"-head requirement";
+  document.getElementById("volumeSub").textContent = "Daily units picked against the "+fmt(a.all[a.all.length-1] ? a.all[a.all.length-1].proj : 75000)+"-unit daily plan";
+
+  mountMiniChart("chart-daynight", {
+    data: all,
+    series: [
+      { key:"ippD", label:"Day IPP", color:"var(--accent)" },
+      { key:"ippN", label:"Night IPP", color:"var(--chart-4)" }
+    ],
+    refLines: [ { value: TARGET_IPP, label: "Target " + fmt(TARGET_IPP,0), color: "var(--warning)" } ],
+    unit: "", decimals: 0
+  });
+
+  mountMiniChart("chart-manpower", {
+    data: all,
+    series: [ { key:"mp", label:"Total manpower", color:"var(--accent)" } ],
+    areaSeriesIndex: 0,
+    refLines: [ { value: a.reqWorkforce, label: "Required " + fmt(a.reqWorkforce,0), color: "var(--warning)" } ],
+    unit: "", decimals: 0
+  });
+
+  mountMiniChart("chart-volume", {
+    data: all,
+    series: [ { key:"load", label:"Processed units", color:"var(--success)" } ],
+    areaSeriesIndex: 0,
+    refLines: [ { value: (all[all.length-1]||{}).proj || 75000, label: "Projected " + fmt((all[all.length-1]||{}).proj || 75000), color: "var(--warning)" } ],
+    unit: "", decimals: 0
+  });
+
+  mountMiniChart("chart-fulfilment", {
+    data: all,
+    series: [ { key:"deltaPct", label:"Fulfilment", color:"var(--accent)" } ],
+    areaSeriesIndex: 0,
+    refLines: [ { value: 100, label: "100% fulfilment", color: "var(--success)" } ],
+    unit: "%", decimals: 1,
+    yMaxOverride: 110
+  });
+}
+
+/* ============================== GO ============================== */
+boot(false);
+
+})();
+</script>
+</body>
+</html>

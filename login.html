@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Login</title>
+<link rel="manifest" href="manifest.json">
+<link rel="prefetch" href="/home.html" as="document">
+<link rel="prefetch" href="/vhome.html" as="document">
+<style>
+  *{
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  body{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 90vh;
+    background-color: #f2f2f4;
+  }
+  svg{
+    max-height: 40vh;
+    max-width: 40vw;
+  }
+  section{
+    min-width: 400px;
+    width: 25vw;
+    background-color: #fff;
+    border-radius: 2rem;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    padding: 2rem;
+  }
+  form{
+    margin-top: 2rem;
+    display: grid;
+    width: 100%;
+    place-items: center;
+  }
+  .inp{
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 1rem;
+  }
+  input{
+    width: 100%;
+    aspect-ratio: 5/1;
+    border: 2px solid #dadce0;
+    border-radius: 3rem;
+    outline: none;
+    font-size: 1.3rem;
+    text-indent: 1.5rem;
+  }
+  input:focus{
+    border-color: #fac62c;
+  }
+  label{
+    position: absolute;
+    pointer-events: none;
+    top: 50%;
+    left: 1.7rem;
+    translate: 0 -50%;
+    color: #5f6368;
+    background-color: white;
+    padding: .2rem;
+    font-size: 1.3rem;
+    transition: transform 0.2s ease, top 0.2s ease, font-size 0.2s ease, color 0.2s ease;
+  }
+  input:focus ~ label, input:not(:placeholder-shown) ~ label{
+    top: 0;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #5f6368;
+  }
+  input:focus ~ label{
+    color: #281E01;
+  }
+  button{
+    position: relative;
+    font-size: 1.1rem;
+    font-weight:bold;
+    border: none;
+    border-radius: 3rem;
+    margin: 1rem 0;
+    padding: 1rem 3rem;
+    cursor: pointer;
+    color: #3C1515;
+    background: #fac62c;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    overflow: hidden;
+    transition: background 0.2s ease, opacity 0.2s ease;
+    min-width: 100px;
+  }
+  button:disabled{
+    cursor: not-allowed;
+    opacity: 0.75;
+  }
+  .spinner{
+    display: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2.5px solid rgba(60, 21, 21, 0.3);
+    border-top-color: #3C1515;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  button.loading .spinner{
+    display: inline-block;
+  }
+  button.loading .btn-text::after{
+    content: "Logging in\2026";
+  }
+  button.loading .btn-text{
+    font-size: 0;
+  }
+  button.loading .btn-text::after{
+    font-size: 1.1rem;
+  }
+  .ripple{
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    background: rgba(255, 255, 255, 0.35);
+    animation: expand-ripple 0.6s linear;
+  }
+  p{
+    position: absolute;
+    bottom: 1rem;
+  }
+  @keyframes expand-ripple{to{transform: scale(4);opacity: 0;}}
+  @keyframes spin{to{transform: rotate(360deg);}}
+@media (orientation: portrait){
+  body{
+    flex-direction: column;
+  }
+  section{
+    border-top: 2px solid #fac62c;
+    width: 100vw;
+    min-width: 200px;
+    box-shadow: none;
+  }
+}
+</style>
+</head>
+<body>
+  <svg viewBox="0 0 150 150"><style>.a{fill:#373435;stroke:#373435;stroke-miterlimit:10}.b{fill:#fff;stroke:#373435;stroke-miterlimit:10}.c{fill:#fac62c}</style><path fill-rule="evenodd" class="a" d="m74.5 112.5c-21 0-38-17-38-38 0-21 17-38 38-38 21 0 38 17 38 38 0 21-17 38-38 38z"/><path fill-rule="evenodd" class="b" d="m75 104c-16 0-29-13-29-29 0-16 13-29 29-29 16 0 29 13 29 29 0 16-13 29-29 29z"/><path fill-rule="evenodd" class="a" d="m113 37v75h-9v-75z"/><path fill-rule="evenodd" class="c" d="m46.6 69.9c59.3-52.2 118.4 26.7 74 71.6 0 0 25.8-40.1-3.7-70.5-27.9-28.8-70.3-1.1-70.3-1.1z"/><path fill-rule="evenodd" class="c" d="m103.1 79.3c-59.3 52.2-118.4-26.7-74-71.6 0 0-25.8 40.1 3.6 70.5 28 28.8 70.4 1.1 70.4 1.1z"/></svg>
+  <section>
+    <h1>Hola <br>Welcome Back,</h1>
+    <form action="/logins" method="POST" id="loginForm">
+      <div class="inp"><input placeholder="" name="id" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"><label>Arcos ID</label></div>
+      <div class="inp"><input placeholder="" name="name" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="this.value=this.value.replace(/[^a-zA-Z ]/g,'').replace(/\s+/g,' ').replace(/^\s/,'').replace(/\b\w/g,c=>c.toUpperCase()).replace(/\B[A-Z]/g,c=>c.toLowerCase())"><label>Name</label></div>
+      <button type="submit" id="loginBtn"><span class="spinner"></span><span class="btn-text">Login</span></button>
+    </form>
+  </section>
+  <p>Powered by Nazrul · Uluberia Site</p>
+</body>
+<script>
+  if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js');
+  });
+  }
+
+  const form = document.getElementById('loginForm');
+  const btn = document.getElementById('loginBtn');
+
+  form.addEventListener('submit', function(e){
+    if (!form.checkValidity()) return;
+
+    // ripple effect (kept from original button)
+    const r = btn.getBoundingClientRect();
+    const s = Math.max(r.width, r.height);
+    btn.querySelector('.ripple')?.remove();
+    const p = document.createElement('span');
+    p.className = 'ripple';
+    const evt = e.submitter ? e : null;
+    const cx = (evt && evt.clientX) ? evt.clientX : r.left + r.width / 2;
+    const cy = (evt && evt.clientY) ? evt.clientY : r.top + r.height / 2;
+    p.style.cssText = 'width:' + s + 'px;height:' + s + 'px;left:' + (cx - r.left - s / 2) + 'px;top:' + (cy - r.top - s / 2) + 'px;';
+    btn.appendChild(p);
+
+    // loading / disabled state so the user can't double-submit
+    btn.disabled = true;
+    btn.classList.add('loading');
+  });
+</script>
+</html>

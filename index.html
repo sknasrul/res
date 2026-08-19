@@ -1,184 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no">
-    <title>Dev Nasrul</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Install</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="prefetch" href="/login.html" as="document">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Parkinsans:ital,wght@0,500&display=swap');
-    body{
-        font-family: Parkinsans, sans-serif;
-        -webkit-tap-highlight-color: transparent;
-        user-select: none;
-    }
-    header{
-        display:flex;
-        align-items: center;
-        height: 2rem;
-        justify-content:space-between;
-        background: #F0F4F9;
-        font-size: 1.3rem;
-        padding:.7rem;
-        border-radius:2rem;
-        svg:active{scale: .9;}
-    }
-    .img{
-        display: block;
-        margin: 0 auto;
-        width: 8rem;
-        aspect-ratio: 1;
-        border-radius: 50%;
-        background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
-        background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
-        background-position: -200% 0;
-    }
-    #intro{
-        font-size: 2rem;
-        text-align: center;
-        color: #4070F4;
-        margin-top: 1rem;
-        text-shadow: 1.5rem 1rem .5rem rgba(62, 111, 244, .1);
-        font-weight: 500;
-    }
-    #intro::after{
-        content: '|';
-        font-size: 2.5rem;
-        animation: b 1s infinite;
-        font-family: cursive;
-    }
-    @keyframes b{
-        50%{opacity: 0;}
-    }
-    @keyframes shimmer{
-      100%{background-position: 200% 0;}
-    }
-    #repo{
-        position: fixed;
-        height: 5rem;
-        width: 100%;
-        left: 0;
-        bottom: 0;
-        transition: 0.3s;
-        border-top-left-radius: 3rem;
-        border-top-right-radius: 3rem;
-        b{
-            font-size: 1.3rem;
-            position: relative;
-            margin: 1.5rem;
-        }
-        border-top: 3px solid whitesmoke;
-        backdrop-filter: blur(15px);
-    }
-    hr{
-        background: whitesmoke;
-        color: red;
-        border-radius: 1rem;
-        width: 50px;
-        height: 5px;
-    }
+  :root{
+    --blue: #1a73e8;
+    --blue-dark: #185abc;
+    --brand-red: #ea4335;
+    --brand-yellow: #fbbc05;
+    --brand-green: #34a853;
+    --ink: #202124;
+    --ink-soft: #5f6368;
+    --surface: #ffffff;
+    --bg: #f8f9fa;
+    --radius-lg: 28px;
+    --radius-md: 20px;
+    --shadow-sm: 0 1px 2px rgba(60,64,67,.30), 0 1px 3px rgba(60,64,67,.15);
+    --shadow-md: 0 1px 3px rgba(60,64,67,.30), 0 4px 10px rgba(60,64,67,.16);
+    --shadow-lg: 0 6px 14px rgba(60,64,67,.14), 0 10px 28px rgba(60,64,67,.14);
+  }
+
+  *{
+    font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  body{
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    color: var(--ink);
+    padding: 4.5rem 1.5rem 3rem;
+    background:
+      radial-gradient(680px 420px at 8% 0%,   rgba(26,115,232,.10), transparent 60%),
+      radial-gradient(620px 380px at 100% 8%, rgba(234,67,53,.08),  transparent 60%),
+      radial-gradient(560px 360px at 92% 92%, rgba(52,168,83,.09),  transparent 60%),
+      radial-gradient(560px 360px at 4% 96%,  rgba(251,188,5,.10),  transparent 60%),
+      var(--bg);
+  }
+
+
+  .app-icon{
+    width: 108px;
+    height: 108px;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 2rem;
+    transition: transform .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .app-icon:hover{ transform: translateY(-4px); }
+  .app-icon svg{ width: 68px; height: 68px; }
+
+  h1{
+    font-size: clamp(2.1rem, 4.5vw + 1rem, 3.1rem);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.22;
+    text-align: center;
+  }
+  h1 br{
+    display: block;
+    content: "";
+    margin-top: .1em;
+  }
+  h1 b{
+    color: var(--blue);
+    font-weight: 500;
+  }
+
+  h2{
+    margin: .9rem 0 2.5rem;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  button{
+    background-color: var(--blue);
+    color: #fff;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: .01em;
+    border-radius: 999px;
+    border: none;
+    padding: .95rem 2.4rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    box-shadow: var(--shadow-md);
+    transition: background-color .2s ease, box-shadow .2s ease, transform .15s ease;
+  }
+  button svg{ transition: transform .2s ease; }
+  button:hover{
+    background-color: var(--blue-dark);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+  }
+  button:hover svg{ transform: translateY(2px); }
+  button:active{
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+  button:focus-visible{
+    outline: 2px solid var(--blue-dark);
+    outline-offset: 3px;
+  }
+
+  .fine-print{
+    margin-top: 1.1rem;
+    font-size: .8rem;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+  .fine-print a{
+    color: var(--blue);
+    text-decoration: none;
+  }
+  .fine-print a:hover{ text-decoration: underline; }
+
+  .platforms{
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+  .chip{
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .4rem .9rem;
+    background: var(--surface);
+    border-radius: 999px;
+    font-size: .78rem;
+    color: var(--ink-soft);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .features{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    max-width: 680px;
+    width: 100%;
+    margin-top: 4.5rem;
+  }
+  .feature-card{
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    padding: 1.6rem 1.4rem;
+    box-shadow: var(--shadow-sm);
+    text-align: left;
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .feature-card:hover{
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+  }
+  .feature-icon{
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+  .feature-icon svg{ width: 20px; height: 20px; }
+  .feature-card:nth-child(1) .feature-icon{ background: rgba(26,115,232,.12); }
+  .feature-card:nth-child(1) .feature-icon svg{ stroke: var(--blue); }
+  .feature-card:nth-child(2) .feature-icon{ background: rgba(52,168,83,.13); }
+  .feature-card:nth-child(2) .feature-icon svg{ stroke: var(--brand-green); }
+  .feature-card:nth-child(3) .feature-icon{ background: rgba(234,67,53,.12); }
+  .feature-card:nth-child(3) .feature-icon svg{ stroke: var(--brand-red); }
+  .feature-card:nth-child(4) .feature-icon{ background: rgba(251,188,5,.16); }
+  .feature-card:nth-child(4) .feature-icon svg{ stroke: #b8860b; }
+
+  .feature-card h3{
+    font-size: .98rem;
+    font-weight: 500;
+    margin-bottom: .35rem;
+  }
+  .feature-card p{
+    font-size: .85rem;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+
+  footer{
+    margin-top: 3.5rem;
+    font-size: .75rem;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  @media (max-width: 700px){
+    .features{ grid-template-columns: 1fr; max-width: 420px; }
+    body{ padding-top: 3.5rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; }
+  }
 </style>
 </head>
 <body>
-    <header>
-        <svg onclick="document.body.style.filter = document.body.style.filter ? '' : 'blur(15px)';" width="35" viewBox="0 0 24 24"><path d="M3 8a1 1 0 0 1 1-1h16a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1m0 8a1 1 0 0 1 1-1h10a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1"></path></svg>
-        Dev Nasrul
-        <svg onclick="window.location.href='login'" width="35" viewBox="0 0 24 24"><g fill="#200E32" transform="translate(3 2)"> <ellipse cx="9" cy="5.556" opacity=".4" rx="5.625" ry="5.556"></ellipse> <path d="M17.9902354,16.6757991 L17.9902354,16.6757991 C17.9953097,16.5967226 17.9953097,16.5174327 17.9902354,16.4383562 C17.9679741,16.1461262 17.885058,15.8607505 17.7461199,15.5981735 C17.1993012,14.5296804 15.6662559,14.0456621 14.3870907,13.7716895 C13.4744565,13.5817014 12.5471782,13.4595545 11.6139387,13.4063927 L10.6374767,13.3333333 L10.1980688,13.3333333 L9.6512501,13.3333333 L8.34279105,13.3333333 L7.79597234,13.3333333 L7.35656445,13.3333333 L6.38010248,13.4063927 C5.44686291,13.4595545 4.51958466,13.5817014 3.60695046,13.7716895 C2.32778527,14.0091324 0.794739971,14.5022831 0.247921264,15.5981735 C0.10898315,15.8607505 0.0260670984,16.1461262 0.00380576968,16.4383562 C-0.00126858989,16.5174327 -0.00126858989,16.5967226 0.00380576968,16.6757991 L0.00380576968,16.6757991 C-0.000879294659,16.7548861 -0.000879294659,16.834155 0.00380576968,16.913242 C0.0303656032,17.2029741 0.116574533,17.4851701 0.257685884,17.7442922 C0.804504591,18.8127854 2.33754989,19.2968037 3.61671508,19.5707763 C4.53104892,19.7518719 5.45762024,19.8739256 6.3898671,19.9360731 L7.36632907,20 L7.60067995,20 L7.80573696,20 L10.2078334,20 L10.4128904,20 L10.6472413,20 L11.6237033,19.9360731 C12.5559501,19.8739256 13.4825215,19.7518719 14.3968553,19.5707763 C15.6760205,19.3242009 17.2090658,18.8401826 17.7558845,17.7442922 C17.890425,17.4769528 17.9730826,17.1893744 18,16.8949772 C18.0012406,16.8218031 17.9979804,16.748623 17.9902354,16.6757991 Z"></path></g></svg>
-    </header>
-    <img class="img" style="margin-top: 25dvh;" src="static/photo.jpg">
-    <div id="intro"></div>
-    <div id="repo">
-        <hr>
-        <b>Repositories</b>
+
+
+  <div class="app-icon">
+    <svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" width="150" height="150"><style>.a{fill:#373435;stroke:#373435;stroke-miterlimit:10}.b{fill:#fff;stroke:#373435;stroke-miterlimit:10}.c{fill:#fac62c}</style><path fill-rule="evenodd" class="a" d="m74.5 112.5c-21 0-38-17-38-38 0-21 17-38 38-38 21 0 38 17 38 38 0 21-17 38-38 38z"/><path fill-rule="evenodd" class="b" d="m75 104c-16 0-29-13-29-29 0-16 13-29 29-29 16 0 29 13 29 29 0 16-13 29-29 29z"/><path fill-rule="evenodd" class="a" d="m113 37v75h-9v-75z"/><path fill-rule="evenodd" class="c" d="m46.6 69.9c59.3-52.2 118.4 26.7 74 71.6 0 0 25.8-40.1-3.7-70.5-27.9-28.8-70.3-1.1-70.3-1.1z"/><path fill-rule="evenodd" class="c" d="m103.1 79.3c-59.3 52.2-118.4-26.7-74-71.6 0 0-25.8 40.1 3.6 70.5 28 28.8 70.4 1.1 70.4 1.1z"/></svg>
+  </div>
+
+  <h1>All your needs<br>on <b>Arcos</b></h1>
+  <h2>Download the Arcos app now</h2>
+
+  <button id="installBtn">
+    Install
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v12"/>
+      <path d="M7 10l5 5 5-5"/>
+      <path d="M5 21h14"/>
+    </svg>
+  </button>
+
+  <p class="fine-print">By installing, you agree to Arcos's <a href="#">Terms of Service</a></p>
+
+  <div class="platforms">
+    <span class="chip">Android</span>
+    <span class="chip">iOS</span>
+    <span class="chip">Desktop</span>
+  </div>
+
+  <section class="features">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-clock h-4 w-4 shrink-0" aria-hidden="true" data-tsd-source="/src/routes/index.tsx:266:7"><path d="M16 14v2.2l1.6 1"></path><path d="M16 2v4"></path><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"></path><path d="M3 10h5"></path><path d="M8 2v4"></path><circle cx="16" cy="16" r="6"></circle></svg>
+      </div>
+      <h3>Work schedules</h3>
+      <p>Check your upcoming shifts and work schedules at a glance.</p>
     </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6"/><path d="m14 16 3 3 5-6"/></svg>
+      </div>
+      <h3>Your presence</h3>
+      <p>Mark attendance and track your presence in just a couple of taps.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+      </div>
+      <h3>Additional forms</h3>
+      <p>View and fill out additional forms whenever you need them.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wallet h-4 w-4 shrink-0" aria-hidden="true" data-tsd-source="/src/routes/index.tsx:266:7"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path></svg>
+      </div>
+      <h3>Get payslip</h3>
+      <p>Access and download your payslip as soon as it's ready.</p>
+    </div>
+  </section>
+
+  <footer>&copy; 2026 Arcos. All rights reserved.</footer>
+
 <script>
-    const t = document.getElementById('intro');
-    l = ['Sk Nasrul', 'Sk Nasrul Islam'];
-    let ts = 100, es = 50, pb = 1000, c = 0, i = true, ti = 0, int;
-    function type() {
-        const ct = l[c];
-        if (i) {
-            t.textContent += ct[ti];
-            ti++;
-            if (ti === ct.length) {
-                i = false;
-                setTimeout(() => {
-                    clearInterval(int);
-                    int = setInterval(erase, es);
-                }, pb);
-            }}
-    }
-    function erase() {
-        if (!i) {
-            t.textContent = t.textContent.slice(0, -1);
-            if (t.textContent === '') {
-                clearInterval(int);
-                c = (c + 1) % l.length;
-                ti = 0;
-                i = true;
-                setTimeout(() => {
-                    int = setInterval(type, ts);
-                }, pb);
-            }
-        }
-    }
-    int = setInterval(type, ts);
-
-
-    let lastTouchY = 0;
-let canRun = true;
-
-let ele = document.getElementById("repo");
-function onScrollUp() {
-  console.log("Tried to scroll up!");
-  repo.style="height:5rem;";
-
-}
-
-function onScrollDown() {
-    repo.style="height:90%;";
-
-    console.log("Tried to scroll down!");
-}
-
-// Mouse wheel detection
-window.addEventListener("wheel", function (e) {
-  if (!canRun) return;
-
-  if (e.deltaY < 0) {
-    onScrollUp();
-  } else if (e.deltaY > 0) {
-    onScrollDown();
+let deferredPrompt;
+// Redirect if running as an installed PWA
+function checkPWA() {
+  const isPWA =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true; // iOS Safari
+  if (isPWA) {
+    location.replace('/login.html');
   }
-
-  canRun = false;
-  setTimeout(() => (canRun = true), 300);
+}
+// Initial check
+checkPWA();
+// Listen for display mode changes
+window.matchMedia('(display-mode: standalone')
+  .addEventListener('change', checkPWA);
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js');
+  });
+}
+// Capture the install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = 'inline-flex';
 });
-
-// Touch swipe detection (for mobile)
-window.addEventListener("touchstart", function (e) {
-  lastTouchY = e.touches[0].clientY;
+// Install button
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
 });
-
-window.addEventListener("touchmove", function (e) {
-  if (!canRun) return;
-
-  let currentY = e.touches[0].clientY;
-  if (currentY > lastTouchY + 10) {
-    onScrollUp();
-    canRun = false;
-  } else if (currentY < lastTouchY - 10) {
-    onScrollDown();
-    canRun = false;
-  }
-
-  setTimeout(() => (canRun = true), 300);
+// Hide button after installation
+window.addEventListener('appinstalled', () => {
+  installBtn.style.display = 'none';
+  checkPWA();
 });
-
-    document.addEventListener('touchmove', function(event) {
-  event.preventDefault();
-}, { passive: false });
-
 </script>
 </body>
 </html>

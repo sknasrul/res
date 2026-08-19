@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>VIP Panel</title>
+  <meta name="navigation-bar-color" content="#0a0a0d">
+<meta name="theme-color" content="#0a0a0d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#0a0a0d">
+<style>
+  :root {
+    --bg-0: #0a0a0d;
+    --bg-1: #101019;
+    --panel: rgba(18, 19, 27, 0.62);
+    --panel-border: rgba(246, 211, 101, 0.14);
+    --tile: rgba(255, 255, 255, 0.035);
+    --tile-border: rgba(246, 211, 101, 0.10);
+    --tile-border-hover: rgba(246, 211, 101, 0.38);
+    --text-primary: #f5f1e6;
+    --text-secondary: rgba(245, 241, 230, 0.56);
+    --text-tertiary: rgba(245, 241, 230, 0.36);
+    --gold: #f3c351;
+    --gold-soft: #f6d365;
+    --gold-deep: #caa04d;
+    --gold-wash: rgba(246, 211, 101, 0.14);
+    --online: #33c17a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
+
+  html { height: auto; overscroll-behavior-y: auto; }
+
+  body {
+    min-height: 100vh;
+    width: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    padding: clamp(14px, 3vw, 28px) clamp(16px, 4vw, 48px);
+    gap: 12px; 
+    background:
+      radial-gradient(ellipse 900px 620px at 100% 100%, rgba(246, 211, 101, 0.09), transparent 60%),
+      radial-gradient(ellipse 700px 520px at 0% 0%, rgba(246, 211, 101, 0.05), transparent 55%),
+      var(--bg-0);
+  }
+
+  .page {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    gap: 14px;
+    animation: fadeUp .5s ease both;
+  }
+
+  .actions-panel { order: 3; }
+  .greeting-header { order: 1; }
+  .stack-wrap { order: 2; }
+
+  @media (min-width: 640px) and (max-width: 899px) {
+    .page { max-width: 640px; gap: 20px; }
+    .actions { max-width: 560px; gap: 16px; }
+    .action-btn { flex-basis: calc((100% - 32px) / 3); min-height: 128px; }
+    .action-btn .icon-wrap { width: 58px; height: 58px; }
+    .action-btn .icon-wrap svg { width: 26px; height: 26px; }
+    .action-btn .label { font-size: 15px; }
+    .avatar-wrap { width: 64px; height: 64px; }
+    .avatar { font-size: 19px; }
+  }
+
+  .vip-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .vip-heading-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(246, 211, 101, 0.24), rgba(246, 211, 101, 0.06));
+    color: var(--gold);
+    box-shadow: 0 10px 26px -12px rgba(246, 211, 101, 0.5);
+  }
+  .vip-heading-icon svg { width: 16px; height: 16px; }
+
+  @media (min-width: 900px) {
+    html { height: 100%; overflow: hidden; }
+    body { height: 100vh; height: var(--app-height, 100vh); overflow: hidden; }
+    .page {
+      height: 100%;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(220px, 260px) 1fr;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "sidebar header"
+        "sidebar stack";
+      gap: 20px;
+    }
+    .greeting-header { grid-area: header; order: initial; }
+    .stack-wrap { grid-area: stack; order: initial; }
+    .actions-panel {
+      grid-area: sidebar;
+      order: initial;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-right: 1px solid var(--panel-border);
+      border-radius: 0 24px 24px 0;
+      padding: 20px 14px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      overflow-y: auto;
+      position: fixed;
+      left: 0;
+      top: 0;
+      height: 100vh;
+      margin: 0;
+      width: 260px;
+    }
+    .actions-panel {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(246, 211, 101, 0.35) rgba(255, 255, 255, 0.04);
+    }
+    .actions-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+    .actions-panel::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+    }
+    .actions-panel::-webkit-scrollbar-thumb {
+      background: rgba(246, 211, 101, 0.32);
+      border-radius: 8px;
+    }
+    .actions-panel::-webkit-scrollbar-thumb:hover {
+      background: rgba(246, 211, 101, 0.55);
+    }
+    .actions-panel .actions-heading { margin: 0 0 12px 6px; flex-shrink: 0; }
+    .actions-panel .actions {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      max-width: none;
+      width: 100%;
+      margin: 0;
+      gap: 10px;
+    }
+    .actions-panel .action-btn {
+      flex: 0 0 auto;
+      width: 100%;
+      flex-direction: row;
+      justify-content: flex-start;
+      min-height: 60px;
+      padding: 12px 14px;
+      gap: 14px;
+      border-radius: 16px;
+    }
+    .actions-panel .action-btn .icon-wrap { width: 42px; height: 42px; }
+    .actions-panel .action-btn .icon-wrap svg { width: 20px; height: 20px; }
+    .actions-panel .action-btn .label-block { align-items: flex-start; }
+    .actions-panel .action-btn .label { font-size: 14px; }
+
+    /* Hubs Management group behaves like a real collapsible section in the sidebar */
+    .actions-panel .hubs-toggle { display: flex; }
+    .actions-panel .hubs-group { display: block; width: 100%; }
+    .actions-panel .hubs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .actions-panel .hubs-list.collapsed { display: none; }
+    .actions-panel .fc-wrap { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+    .actions-panel .fc-subactions {
+      flex-direction: column;
+      margin-left: 16px;
+      padding-left: 12px;
+      border-left: 1px solid var(--tile-border);
+      width: calc(100% - 16px);
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .page { grid-template-columns: 260px 1fr; }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(51,193,122,0.45); }
+    50%      { box-shadow: 0 0 0 5px rgba(51,193,122,0); }
+  }
+
+  .greeting-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px clamp(4px, 2vw, 12px);
+    flex-shrink: 0;
+    gap: 16px;
+  }
+
+  @keyframes wave {
+    0%, 60%, 100% { transform: rotate(0deg); }
+    10%, 30% { transform: rotate(14deg); }
+    20% { transform: rotate(-8deg); }
+    40% { transform: rotate(10deg); }
+    50% { transform: rotate(0deg); }
+  }
+.greeting-header h1 {
+  font-weight: 700;
+  line-height: 1.3;
+  min-width: 0;
+}
+
+.greet-line2 {
+  font-size: large;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+.wave-emoji {
+  display: inline-block;
+  font-size: larger;
+  transform-origin: 70% 70%;
+  animation: wave 2.4s ease-in-out infinite;
+}
+  .avatar-wrap {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    align-self: center;
+    border-radius: 50%;
+    box-shadow: 0 0 16px 3px rgba(246, 211, 101, 0.35);
+  }
+  .avatar-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--gold-deep), var(--gold-soft), #fff3d1, var(--gold-deep));
+    animation: spin 6s linear infinite;
+    transition: filter 0.3s ease;
+  }
+  .avatar {
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--bg-1);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(.22,1,.36,1);
+  }
+  .avatar-wrap:hover .avatar { transform: scale(1.06); }
+  .avatar-wrap:hover .avatar-ring { filter: brightness(1.2); animation-duration: 2.2s; }
+  .status-dot {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--online);
+    border: 2.5px solid var(--bg-0);
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+
+  .logout-pill {
+    position: absolute;
+    top: 62px;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: rgba(20, 21, 30, 0.85);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease, color .2s ease, border-color .2s ease;
+  }
+  .logout-pill svg { width: 12px; height: 12px; }
+  .avatar-wrap:hover .logout-pill,
+  .avatar-wrap:focus-within .logout-pill {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .logout-pill:hover { color: var(--gold); border-color: var(--tile-border-hover); }
+
+  .stack-wrap {
+    flex: 1 1 auto; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; min-height: 0; position: relative;
+  }
+
+  .actions-heading {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin: 4px 0 4px clamp(4px, 2vw, 12px);
+    flex-shrink: 0;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+.action-btn {
+    --mx: 50%;
+    --my: 50%;
+    position: relative;
+    flex: 0 1 calc((100% - 24px) / 3);
+    min-width: 92px;
+    min-height: 108px;
+    border-radius: 22px;
+    background: var(--tile);
+    border: 1px solid var(--tile-border);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 18px 8px; cursor: pointer; overflow: hidden;
+    color: var(--text-primary); font-family: inherit;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+  }
+
+  @media (max-width: 359px) {
+    .action-btn {
+      flex-basis: calc((100% - 12px) / 2);
+      min-width: 0;
+      padding: 16px 8px;
+    }
+    .action-btn .label { font-size: 12.5px; }
+    .action-btn .icon-wrap { width: 46px; height: 46px; }
+    .action-btn .icon-wrap svg { width: 22px; height: 22px; }
+  }
+
+  .action-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(160px circle at var(--mx) var(--my), var(--gold-wash), transparent 68%);
+    opacity: 0;
+    transition: opacity .35s ease;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .action-btn:hover::before,
+  .action-btn:focus-visible::before { opacity: 1; }
+
+  .action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+    border-color: var(--tile-border-hover);
+  }
+  .action-btn:active { transform: translateY(0) scale(0.98); }
+
+  .action-btn .icon-wrap {
+    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(246, 211, 101, 0.10);
+    color: var(--gold);
+    position: relative; z-index: 1;
+  }
+  .action-btn .icon-wrap svg { width: 24px; height: 24px; }
+  .action-btn .label-block { display: flex; flex-direction: column; align-items: center; z-index: 1; position: relative; }
+  .action-btn .label { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+  .action-btn .sublabel { font-size: 10px; font-weight: 700; color: var(--text-tertiary); margin-top: 1px; }
+
+  .action-btn .lock-badge {
+    display: none;
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--bg-1);
+    border: 1px solid var(--panel-border);
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  .action-btn .lock-badge svg { width: 10px; height: 10px; }
+  .action-btn.locked .lock-badge { display: flex; }
+  .action-btn.locked { opacity: .5; cursor: not-allowed; }
+  .action-btn.locked:hover {
+    transform: none;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+    border-color: var(--tile-border);
+  }
+
+  /* ---------- Hubs Management group ---------- */
+
+.hubs-group {
+    width: 100%;
+    flex: 1 1 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    order: -1;
+  }
+
+  .hubs-toggle {
+    display: none; /* shown only in the sidebar on desktop; flat on mobile */
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color .2s ease, background .2s ease;
+  }
+  .hubs-toggle:hover { color: var(--gold-soft); background: rgba(246, 211, 101, 0.06); }
+  .hubs-toggle-left { display: flex; align-items: center; gap: 8px; }
+  .hubs-toggle-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(246, 211, 101, 0.10); color: var(--gold); flex-shrink: 0;
+  }
+  .hubs-toggle-icon svg { width: 13px; height: 13px; }
+  .hubs-chevron { width: 15px; height: 15px; flex-shrink: 0; transition: transform .25s ease; }
+  .hubs-chevron.collapsed { transform: rotate(-90deg); }
+
+  .hubs-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .fc-wrap {
+    display: contents;
+  }
+
+  .action-btn.hub-btn { position: relative; }
+  .fc-chevron {
+    width: 14px; height: 14px; margin-left: 4px; flex-shrink: 0;
+    transition: transform .25s ease; position: relative; z-index: 1; color: var(--text-tertiary);
+  }
+  .fc-chevron.open { transform: rotate(180deg); }
+
+  .fc-subactions {
+    display: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .fc-subactions.show { display: flex; }
+  .action-btn.sub-btn { min-height: 88px; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translate(-50%, 16px);
+    background: rgba(16, 17, 25, 0.96);
+    border: 1px solid var(--panel-border);
+    color: var(--text-primary);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 60;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-width: 86vw;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (min-width: 700px) {
+    .actions { max-width: 640px; gap: 18px; }
+    .action-btn { flex-basis: calc((100% - 36px) / 3); min-height: 120px; }
+    .action-btn .label { font-size: 14.5px; }
+  }
+
+  /* ---------- VIP card (matches reference design) ---------- */
+
+  /* True credit-card proportions: 85.60mm x 53.98mm */
+  .vip-card {
+    position: relative;
+    width: min(90vw, 400px);
+    aspect-ratio: 85.6 / 53.98;
+    border-radius: 22px;
+    padding: 22px 26px;
+    background:
+      radial-gradient(130% 110% at 100% 100%, rgba(201, 140, 60, 0.55) 0%, rgba(140, 92, 44, 0.22) 32%, transparent 60%),
+      linear-gradient(160deg, #16171f 0%, #101018 45%, #0c0c11 100%);
+    border: 1px solid rgba(246, 211, 101, 0.35);
+    box-shadow: 0 24px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(246, 211, 101, 0.08) inset;
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+  /* the diagonal white sheen line across the card */
+  .vip-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(122deg,
+      transparent 32%,
+      rgba(255, 255, 255, 0.05) 42%,
+      rgba(255, 255, 255, 0.16) 48%,
+      rgba(255, 255, 255, 0.07) 54%,
+      transparent 64%);
+    pointer-events: none;
+  }
+
+  .vip-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+  .vip-card-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--gold-soft);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+  }
+  .vip-card-brand svg { width: 16px; height: 16px; }
+
+  .vip-card-chip {
+    width: 48px; height: 32px; border-radius: 7px;
+    background: linear-gradient(135deg, #c99a4e 0%, #f4e2ad 45%, #e2c288 70%, #b8894a 100%);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    flex-shrink: 0;
+  }
+
+  .vip-card-mid {
+    position: relative;
+    z-index: 1;
+  }
+
+  .vip-card-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+  }
+
+  .vip-card-name {
+    margin-top: 14px;
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+
+  .vip-card-details {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    row-gap: 14px;
+    column-gap: 16px;
+  }
+  .vip-card-field.full { grid-column: 1 / -1; }
+  .vip-card-label {
+    display: block;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+    margin-bottom: 3px;
+  }
+  .vip-card-value {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .state-overlay {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px; background: rgba(8, 9, 13, 0.92);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    color: var(--text-primary); font-weight: 600; font-size: 14px; text-align: center; padding: 24px;
+    z-index: 50;
+  }
+  .state-overlay.hidden { display: none; }
+  .retry-btn {
+    margin-top: 6px; padding: 9px 20px; border-radius: 999px; border: none;
+    background: linear-gradient(135deg, var(--gold-deep), var(--gold-soft)); color: #1a1508; font-weight: 700; cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page, .avatar-ring, .status-dot { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="errorOverlay" class="state-overlay hidden">
+    <div id="errorMessage">Something went wrong.</div>
+    <button class="retry-btn" id="retryBtn">Retry</button>
+  </div>
+
+  <div class="page" id="pageContent" style="visibility:hidden;">
+    <div class="actions-panel">
+      <div class="actions-heading vip-heading">
+        <span class="vip-heading-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"></path><path d="M5 21h14"></path></svg>
+        </span>
+        VIP Panel
+      </div>
+      <div class="actions" id="actionsGrid">
+
+        <!-- Hubs Management group: header/toggle shows only on desktop sidebar;
+             on mobile the FC and MH buttons appear directly in the tile grid. -->
+        <div class="hubs-group" id="hubsGroup">
+          <button class="hubs-toggle" id="hubsToggle" type="button" aria-expanded="true" aria-controls="hubsList">
+            <span class="hubs-toggle-left">
+              <span class="hubs-toggle-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h1"/><path d="M9 13h1"/><path d="M14 9h1"/><path d="M14 13h1"/><path d="M10 21v-4h4v4"/>
+                </svg>
+              </span>
+              <span>Hubs Management</span>
+            </span>
+            <svg class="hubs-chevron" id="hubsChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+
+          <div class="hubs-list" id="hubsList">
+            <div class="fc-wrap">
+              <button class="action-btn hub-btn" id="fcBtn" type="button" aria-expanded="false" aria-controls="fcSubActions">
+                <div class="icon-wrap">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/>
+                  </svg>
+                </div>
+                <div class="label-block">
+                  <span class="label">Fulfilment Center</span>
+                </div>
+              </button>
+
+              <div class="fc-subactions" id="fcSubActions">
+                <button class="action-btn sub-btn" data-href="/fc">
+                  <div class="icon-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>
+                    </svg>
+                  </div>
+                  <div class="label-block"><span class="label">FC Attendance</span></div>
+                </button>
+                <button class="action-btn sub-btn" data-href="/fcreport">
+                  <div class="icon-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="9" y2="17"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="15" y1="14" x2="15" y2="17"/>
+                    </svg>
+                  </div>
+                  <div class="label-block"><span class="label">FC Report</span></div>
+                </button>
+              </div>
+            </div>
+
+            <button class="action-btn hub-btn" id="mhBtn" data-href="/mh.html" type="button">
+              <div class="icon-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/>
+                </svg>
+              </div>
+              <div class="label-block">
+                <span class="label">Mother Hub</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <button class="action-btn" data-action="forms" data-href="/forms">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <div class="label-block"><span class="label">Forms</span></div>
+        </button>
+
+        <button class="action-btn locked" data-action="schedules" type="button">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span class="lock-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+              </svg>
+            </span>
+          </div>
+          <div class="label-block"><span class="label">Schedules</span></div>
+        </button>
+
+        <button class="action-btn locked" data-action="present" type="button">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/>
+            </svg>
+            <span class="lock-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+              </svg>
+            </span>
+          </div>
+          <div class="label-block"><span class="label">Present</span></div>
+        </button>
+
+
+      </div>
+    </div>
+
+    <div class="greeting-header">
+<h1>
+  <span style="font-size:1.5rem;">Hello,</span><br>
+  <span style="font-size:2rem;" id="userName">-</span>
+  <span class="wave-emoji">👋</span><br>
+  <span class="greet-line2">Welcome to your VIP Panel.</span>
+</h1>
+      <div class="avatar-wrap" tabindex="0">
+        <div class="avatar-ring"></div>
+        <div class="avatar" id="avatarInitials">--</div>
+        <div class="status-dot"></div>
+        <button class="logout-pill" id="logoutBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Log out
+        </button>
+      </div>
+    </div>
+
+    <div class="stack-wrap">
+      <div class="vip-card" id="vipCard">
+        <div class="vip-card-top">
+          <div class="vip-card-brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7Z"/><path d="M5 20h14"/>
+            </svg>
+            <span>VIP ACCESS</span>
+          </div>
+          <div class="vip-card-chip"></div>
+        </div>
+        <div class="vip-card-mid">
+          <div class="vip-card-tag">PREMIUM ACCESS GRANTED</div>
+          <div class="vip-card-name" id="vipCardName">—</div>
+        </div>
+        <div class="vip-card-details">
+          <div class="vip-card-field">
+            <span class="vip-card-label">ARCOS ID</span>
+            <span class="vip-card-value" id="vipCardId">—</span>
+          </div>
+          <div class="vip-card-field">
+            <span class="vip-card-label">TYPE</span>
+            <span class="vip-card-value" id="vipCardType">Platinum</span>
+          </div>
+          <div class="vip-card-field full">
+            <span class="vip-card-label">STATUS</span>
+            <span class="vip-card-value" id="vipCardStatus">Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  function setAppHeight(){
+    document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
+  }
+  setAppHeight();
+  window.addEventListener('resize', setAppHeight);
+  window.addEventListener('orientationchange', setAppHeight);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .catch(err => console.warn('Service worker registration failed:', err));
+    });
+  }
+
+  const errorOverlay = document.getElementById('errorOverlay');
+  const errorMessage = document.getElementById('errorMessage');
+  const pageContent = document.getElementById('pageContent');
+
+  function showError(msg){
+    errorOverlay.classList.remove('hidden');
+    errorMessage.textContent = msg;
+  }
+  function clearError(){
+    errorOverlay.classList.add('hidden');
+  }
+
+  // Retry just re-renders the card from local/frontend data — there is
+  // no server round trip on this page, so this simply clears any error.
+  document.getElementById('retryBtn').addEventListener('click', () => { clearError(); populateVipCard(); });
+
+  function getCookie(name){
+    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function renderUser(name){
+    document.getElementById('userName').textContent = name;
+    document.getElementById('avatarInitials').textContent = name
+      .split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  }
+
+  const cookieId = getCookie('id');
+  const cookieName = getCookie('name');
+
+  if(!cookieId || !cookieName){
+    window.location.href = '/login';
+  } else {
+    renderUser(cookieName);
+    pageContent.style.visibility = 'visible';
+  }
+
+  const toastEl = document.getElementById('toast');
+  let toastTimer = null;
+
+  function showToast(msg, duration = 2400){
+    if(!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
+  }
+
+  // Hubs Management collapse/expand — desktop sidebar only.
+  // On mobile the toggle is hidden via CSS and the list is always shown flat,
+  // so this handler simply has no visible effect there.
+  const hubsToggle = document.getElementById('hubsToggle');
+  const hubsList = document.getElementById('hubsList');
+  const hubsChevron = document.getElementById('hubsChevron');
+
+  if(hubsToggle){
+    hubsToggle.addEventListener('click', () => {
+      const expanded = hubsToggle.getAttribute('aria-expanded') === 'true';
+      hubsToggle.setAttribute('aria-expanded', String(!expanded));
+      hubsList.classList.toggle('collapsed', expanded);
+      hubsChevron.classList.toggle('collapsed', expanded);
+    });
+  }
+
+  // FC expands in place to reveal FC Attendance / FC Report — never navigates itself.
+  const fcBtn = document.getElementById('fcBtn');
+  const fcSubActions = document.getElementById('fcSubActions');
+  const fcChevron = document.getElementById('fcChevron');
+
+  if(fcBtn){
+    fcBtn.addEventListener('click', () => {
+      const expanded = fcBtn.getAttribute('aria-expanded') === 'true';
+      fcBtn.setAttribute('aria-expanded', String(!expanded));
+      fcSubActions.classList.toggle('show', !expanded);
+      fcChevron.classList.toggle('open', !expanded);
+    });
+  }
+
+  // Only buttons that carry a data-href are navigable at all (Forms, Mother Hub,
+  // FC Attendance, FC Report). Locked buttons never receive a data-href, so there
+  // is no link or link history for them anywhere in the frontend.
+  document.querySelectorAll('.action-btn[data-href]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.location.href = btn.dataset.href;
+    });
+  });
+
+  document.querySelectorAll('.action-btn.locked').forEach(btn => {
+    btn.addEventListener('click', () => {
+      showToast('Not available for you');
+    });
+  });
+
+  // Card is populated entirely from data already available on the
+  // frontend (cookies) — no request to the server is made for this page.
+  function populateVipCard(){
+    const name = cookieName || 'Member';
+    document.getElementById('vipCardName').textContent = name;
+    document.getElementById('vipCardId').textContent = cookieId || '—';
+    document.getElementById('vipCardType').textContent = getCookie('vipType') || 'Platinum';
+    document.getElementById('vipCardStatus').textContent = getCookie('vipStatus') || 'Active';
+  }
+
+  if(cookieId && cookieName){
+    populateVipCard();
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    document.cookie = 'id=; Max-Age=0; path=/';
+    document.cookie = 'name=; Max-Age=0; path=/';
+    document.cookie = 'vip=; Max-Age=0; path=/';
+    if('caches' in window){
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    }
+    window.location.href = '/login';
+  });
+
+  document.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const rect = btn.getBoundingClientRect();
+      btn.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+      btn.style.setProperty('--my', `${e.clientY - rect.top}px`);
+    });
+    btn.addEventListener('focus', () => {
+      btn.style.setProperty('--mx', '50%');
+      btn.style.setProperty('--my', '50%');
+    });
+  });
+</script>
+
+</body>
+</html>
